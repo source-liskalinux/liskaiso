@@ -1,0 +1,39 @@
+{
+    "layer": "top",
+    "position": "top",
+    "height": 38,
+    "margin-top": 8,
+    "margin-left": 12,
+    "margin-right": 12,
+    "modules-left": ["custom/launcher", "hyprland/workspaces"],
+    "modules-center": ["clock"],
+    "modules-right": ["pulseaudio", "network", "custom/installer", "tray"],
+    "custom/launcher": {
+        "format": "󰣇 Liska",
+        "on-click": "rofi -show drun",
+        "tooltip": false
+    },
+    "hyprland/workspaces": {
+        "format": "{id}",
+        "on-click": "activate"
+    },
+    "clock": {
+        "format": "beb {:%H:%M - %A, %d %b}",
+        "tooltip-format": "<big>{:%Y %B}</big>\n<tt><small>{calendar}</small></tt>"
+    },
+    "pulseaudio": {
+        "format": "󰕾 {volume}%",
+        "format-muted": "󰝟 Muted"
+    },
+    "network": {
+        "format-wifi": "󰤨  {essid}",
+        "format-ethernet": "󰈀  Ethernet",
+        "format-disconnected": "󰤭  Offline"
+    },
+    "custom/installer": {
+        "format": "󰐕 Install Liska Linux",
+        "on-click": "~/.config/hypr/scripts/launch-installer.sh",
+        "tooltip": true,
+        "tooltip-format": "Run Liska Linux Installer (Super + S)"
+    }
+}
