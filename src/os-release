@@ -1,0 +1,11 @@
+NAME="Liska Linux"
+PRETTY_NAME="{edition name}"
+ID=liska
+BUILD_ID=rolling
+ANSI_COLOR="1;36"
+HOME_URL="https://liskalinux.codeberg.page/"
+DOCUMENTATION_URL="https://liskalinux.wikidot.org/"
+SUPPORT_URL="https://codeberg.org/liskalinux/"
+BUG_REPORT_URL="https://codeberg.org/liskalinux/"
+PRIVACY_POLICY_URL="https://liskalinux.codeberg.page/privacy-policy/"
+LOGO=liskalinux-logo

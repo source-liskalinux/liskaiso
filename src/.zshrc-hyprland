@@ -1,0 +1,3 @@
+# Format: [ username@hostname ] / # sudo foo
+PROMPT="%B%F{cyan}[ %n@%m ]%f %F{lightgreen}%~%f %F{white}#%f%b "
+fastfetch
