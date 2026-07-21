@@ -7,7 +7,6 @@ use std::process::exit;
 use std::io::BufRead;
 use std::io::BufReader;
 use std::sync::mpsc;
-use std::collections::HashSet;
 use std::thread;
 
 const CYAN: &str = "\x1b[36m";
