@@ -210,9 +210,9 @@ const CLI_EDITION: Edition = Edition {
     packages: &[
         "linux", "linux-headers", "linux-firmware", "lkpm", "lkchroot", "lkstrap",
         "systemd", "dbus", "glibc", "busybox", "zsh", "sudo", "efibootmgr",
-        "networkmanager", "inetutils", "bash", "nano", "vim", "grub", "libverto",
-        "wget", "curl", "git", "which", "man-db", "man-pages", "mkinitcpio",
-        "util-linux", "coreutils", "findutils", "sed", "grep",
+        "networkmanager", "modemmanager", "usb_modeswitch", "inetutils", "bash",
+        "nano", "vim", "grub", "libverto", "wget", "curl", "git", "which", "man-db",
+        "man-pages", "mkinitcpio", "util-linux", "coreutils", "findutils", "sed", "grep",
     ],
 };
 
@@ -222,12 +222,12 @@ const HYPRLAND_EDITION: Edition = Edition {
     packages: &[
         "linux", "linux-headers", "linux-firmware", "lkpm", "lkchroot", "lkstrap",
         "systemd", "dbus", "glibc", "busybox", "zsh", "sudo", "efibootmgr",
-        "networkmanager", "inetutils", "bash", "nano", "vim", "grub", "libverto",
-        "wget", "curl", "git", "which", "man-db", "man-pages", "mkinitcpio",
-        "util-linux", "coreutils", "findutils", "sed", "grep",
-        "hyprland", "wayland", "wlroots", "mako", "waybar", "pipewire",
-        "pipewire-pulse", "alacritty", "firefox", "xwayland",
-        "hyprpaper", "rofi", "zenity", "polkit", "polkit-gnome", "calamares",
+        "networkmanager", "modemmanager", "usb_modeswitch", "inetutils", "bash",
+        "nano", "vim", "grub", "libverto", "wget", "curl", "git", "which", "man-db",
+        "man-pages", "mkinitcpio", "util-linux", "coreutils", "findutils", "sed", "grep",
+        "hyprland", "wayland", "wlroots", "mako", "waybar", "pipewire", "pipewire-pulse", 
+        "alacritty", "firefox", "xwayland", "hyprpaper", "rofi", "zenity", "polkit", 
+        "polkit-gnome", "calamares",
     ],
 };
 
