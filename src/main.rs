@@ -362,18 +362,25 @@ fn build_edition(edition: &Edition, workspace: &Path) -> Result<PathBuf, String>
         let sddm_target = edition_root.join("usr/lib/systemd/system/sddm.service");
         if sddm_target.exists() && !system_services_dir.exists() {
             let _ = std::os::unix::fs::symlink("/usr/lib/systemd/system/sddm.service", &system_services_dir);
-            print_info("SDDM display manager has been enabled.");
+            print_info("Sddm display manager has been enabled.");
         }
         let sddm_conf_dir = edition_root.join("etc/sddm.conf.d");
         fs::create_dir_all(&sddm_conf_dir).ok();
         let autologin_conf = "[Autologin]\n\
             User=root\n\
-            Session=hyprland\n\n\
+            Session=hyprland.desktop\n\
+            Relogin=false\n\n\
+            [Theme]\n\
+            Current=liska-glassy\n\n\
             [Users]\n\
-            MaximumUid=60500\n\
-            MinimumUid=0\n";
+            MaximumUid=60000\n\
+            MinimumUid=1000\n\
+            HideUsers=root,polkitd,sddm,systemd-coredump,systemd-network,systemd-resolve,nobody\n";
         fs::write(sddm_conf_dir.join("autologin.conf"), autologin_conf).ok();
-        print_info("Configured SDDM autologin for root.");
+        print_info("Configured SDDM autologin and user filters.");
+        let _ = Command::new("sh")
+            .args(&["-c", &format!("chroot {} passwd -d root", edition_root.display())])
+            .output();
         apply_dotfiles(&edition_root)?;
     }
     let os_release_src = PathBuf::from("src/os-release");
