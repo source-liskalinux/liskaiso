@@ -50,7 +50,7 @@ fn run_lkpm_smart_timeout(cmd: &str, args: &[&str]) -> Result<(), String> {
         .map_err(|e| e.to_string())?;
     let stdout = child.stdout.take().ok_or("Failed to capture stdout")?;
     let stderr = child.stderr.take().ok_or("Failed to capture stderr")?;
-    let mut deadline: Option<std::time::Instant> = Some(std::time::Instant::now() + Duration::from_secs(20));
+    let mut deadline: Option<std::time::Instant> = Some(std::time::Instant::now() + Duration::from_secs(30));
     let mut operation_started = false;
     #[derive(Debug)]
     enum ReaderMsg {
