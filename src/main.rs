@@ -364,11 +364,23 @@ fn build_edition(edition: &Edition, workspace: &Path) -> Result<PathBuf, String>
             .output();
         let root_dir = edition_root.join("root");
         fs::create_dir_all(&root_dir).ok();
-        let zprofile_content = "
-            if [ -z \"$DISPLAY\" ] && [ \"$(tty)\" = \"/dev/tty1\" ]; then
+        let zprofile_content = r#"
+            if [ -z "$DISPLAY" ] && [ "$(tty)" = "/dev/tty1" ]; then
+                export XDG_SESSION_TYPE=wayland
+                export XDG_SESSION_DESKTOP=Hyprland
+                export XDG_CURRENT_DESKTOP=Hyprland
+                export XDG_RUNTIME_DIR="/run/user/0"
+                mkdir -p "$XDG_RUNTIME_DIR"
+                chmod 0700 "$XDG_RUNTIME_DIR"
+                for i in $(seq 1 5); do
+                if [ -e /dev/dri/card0 ] || [ -e /dev/dri/renderD128 ]; then
+                    break
+                fi
+                sleep 1
+                done
                 exec Hyprland
             fi
-        ";
+        "#;
         fs::write(root_dir.join(".zprofile"), zprofile_content).ok();
         fs::write(root_dir.join(".bash_profile"), zprofile_content).ok();
         apply_dotfiles(&edition_root)?;
