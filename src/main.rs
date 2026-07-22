@@ -159,7 +159,7 @@ fn run_lkpm_smart_timeout(cmd: &str, args: &[&str]) -> Result<(), String> {
                         let pid = child.id() as i32;
                         unsafe { libc::kill(-pid, libc::SIGKILL); }
                         child.kill().ok();
-                        return Err("Timeout (20s) reached waiting for operation to start".to_string());
+                        return Err("Timeout (30s) reached waiting for operation to start".to_string());
                     }
                 }
             }
