@@ -226,7 +226,7 @@ const HYPRLAND_EDITION: Edition = Edition {
         "wget", "curl", "git", "which", "man-db", "man-pages", "mkinitcpio",
         "util-linux", "coreutils", "findutils", "sed", "grep",
         "hyprland", "wayland", "wlroots", "mako", "waybar", "pipewire",
-        "pipewire-pulse", "alacritty", "sddm", "firefox", "xwayland",
+        "pipewire-pulse", "alacritty", "firefox", "xwayland",
         "hyprpaper", "rofi", "zenity", "polkit", "polkit-gnome", "calamares",
     ],
 };
@@ -358,29 +358,19 @@ fn build_edition(edition: &Edition, workspace: &Path) -> Result<PathBuf, String>
     }
     print_info("Injected zsh to /etc/profile.");
     if edition.id == "hyprland" {
-        let system_services_dir = edition_root.join("etc/systemd/system/display-manager.service");
-        let sddm_target = edition_root.join("usr/lib/systemd/system/sddm.service");
-        if sddm_target.exists() && !system_services_dir.exists() {
-            let _ = std::os::unix::fs::symlink("/usr/lib/systemd/system/sddm.service", &system_services_dir);
-            print_info("Sddm display manager has been enabled.");
-        }
-        let sddm_conf_dir = edition_root.join("etc/sddm.conf.d");
-        fs::create_dir_all(&sddm_conf_dir).ok();
-        let autologin_conf = "[Autologin]\n\
-            User=root\n\
-            Session=hyprland.desktop\n\
-            Relogin=false\n\n\
-            [Theme]\n\
-            Current=liska-glassy\n\n\
-            [Users]\n\
-            MaximumUid=60000\n\
-            MinimumUid=1000\n\
-            HideUsers=root,polkitd,sddm,systemd-coredump,systemd-network,systemd-resolve,nobody\n";
-        fs::write(sddm_conf_dir.join("autologin.conf"), autologin_conf).ok();
-        print_info("Configured SDDM autologin and user filters.");
+        print_info("Configuring direct autostart for Hyprland....");
         let _ = Command::new("sh")
             .args(&["-c", &format!("chroot {} passwd -d root", edition_root.display())])
             .output();
+        let root_dir = edition_root.join("root");
+        fs::create_dir_all(&root_dir).ok();
+        let zprofile_content = "
+            if [ -z \"$DISPLAY\" ] && [ \"$(tty)\" = \"/dev/tty1\" ]; then
+                exec Hyprland
+            fi
+        ";
+        fs::write(root_dir.join(".zprofile"), zprofile_content).ok();
+        fs::write(root_dir.join(".bash_profile"), zprofile_content).ok();
         apply_dotfiles(&edition_root)?;
     }
     let os_release_src = PathBuf::from("src/os-release");
