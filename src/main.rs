@@ -366,22 +366,30 @@ fn build_edition(edition: &Edition, workspace: &Path) -> Result<PathBuf, String>
             let _ = std::os::unix::fs::symlink(seatd_service_target, seatd_wants.join("seatd.service"));
         }
         let _ = Command::new("sh")
-            .args(&["-c", &format!("chroot {} passwd -d root", edition_root.display())])
+            .args(&["-c", &format!("echo 'root:root' | chroot {} chpasswd", edition_root.display())])
             .output();
         let root_dir = edition_root.join("root");
         fs::create_dir_all(&root_dir).ok();
         let start_hypr_script = r#"
-            #!/bin/sh
+            #!/bin/bin/sh
             export XDG_SESSION_TYPE=wayland
             export XDG_SESSION_DESKTOP=Hyprland
             export XDG_CURRENT_DESKTOP=Hyprland
             export XDG_RUNTIME_DIR="/run/user/0"
-            export WLR_NO_HARDWARE_CURSORS=1
             export LIBGL_ALWAYS_SOFTWARE=0
+            
             mkdir -p "$XDG_RUNTIME_DIR"
             chmod 0700 "$XDG_RUNTIME_DIR"
+            
+            # Pastikan seatd service/daemon berjalan untuk manajemen DRM/Input
+            if ! pgrep -x "seatd" > /dev/null; then
+                seatd -g video &
+                sleep 1
+            fi
+
             sleep 1
-            exec Hyprland > /tmp/hyprland.log 2>&1
+            # Jalankan Hyprland di dalam D-Bus Session
+            exec dbus-run-session Hyprland > /tmp/hyprland.log 2>&1
         "#;
         let start_hypr_path = edition_root.join("usr/bin/start-hypr");
         fs::write(&start_hypr_path, start_hypr_script).ok();
