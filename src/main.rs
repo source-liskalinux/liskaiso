@@ -227,7 +227,7 @@ const HYPRLAND_EDITION: Edition = Edition {
         "man-pages", "mkinitcpio", "util-linux", "coreutils", "findutils", "sed", "grep",
         "hyprland", "wayland", "wlroots", "mako", "waybar", "pipewire", "pipewire-pulse", 
         "alacritty", "firefox", "xwayland", "hyprpaper", "rofi", "zenity", "polkit", 
-        "polkit-gnome", "calamares", "seatd", "mesa", "libdrm", "egl-wayland",
+        "polkit-gnome", "calamares", "seatd", "mesa", "libdrm", "egl-wayland", "fastfetch",
     ],
 };
 
