@@ -368,15 +368,8 @@ fn build_edition(edition: &Edition, workspace: &Path) -> Result<PathBuf, String>
         let _ = Command::new("sh")
             .args(&["-c", &format!("chroot {} passwd -d root", edition_root.display())])
             .output();
-        let pam_login = edition_root.join("etc/pam.d/system-auth");
-        if pam_login.exists() {
-            if let Ok(content) = fs::read_to_string(&pam_login) {
-                let updated = content.replace("nullok_secure", "nullok").replace("nullok", "nullok");
-                let _ = fs::write(&pam_login, updated);
-            }
-        }
         let _ = Command::new("sh")
-            .args(&["-c", &format!("echo 'root:root' | chroot {} chpasswd -e $(openssl passwd -6 root 2>/dev/null || echo 'root')", edition_root.display())])
+            .args(&["-c", &format!("echo 'root:root' | chroot {} chpasswd", edition_root.display())])
             .output();
         let root_dir = edition_root.join("root");
         fs::create_dir_all(&root_dir).ok();
@@ -394,7 +387,13 @@ fn build_edition(edition: &Edition, workspace: &Path) -> Result<PathBuf, String>
                 seatd -g video &
                 sleep 1
             fi
-            exec dbus-run-session Hyprland > /tmp/hyprland.log 2>&1
+            dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP XDG_SESSION_TYPE >/dev/null 2>&1
+            systemctl --user import-environment WAYLAND_DISPLAY XDG_CURRENT_DESKTOP XDG_SESSION_TYPE >/dev/null 2>&1
+            if command -v start-hyprland >/dev/null 2>&1; then
+                exec dbus-run-session start-hyprland --i-am-really-stupid > /tmp/hyprland.log 2>&1
+            else
+                exec dbus-run-session Hyprland --i-am-really-stupid > /tmp/hyprland.log 2>&1
+            fi
         "#;
         let start_hypr_path = edition_root.join("usr/bin/start-hypr");
         fs::write(&start_hypr_path, start_hypr_script).ok();
