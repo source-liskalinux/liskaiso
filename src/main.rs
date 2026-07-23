@@ -366,29 +366,34 @@ fn build_edition(edition: &Edition, workspace: &Path) -> Result<PathBuf, String>
             let _ = std::os::unix::fs::symlink(seatd_service_target, seatd_wants.join("seatd.service"));
         }
         let _ = Command::new("sh")
-            .args(&["-c", &format!("echo 'root:root' | chroot {} chpasswd", edition_root.display())])
+            .args(&["-c", &format!("chroot {} passwd -d root", edition_root.display())])
+            .output();
+        let pam_login = edition_root.join("etc/pam.d/system-auth");
+        if pam_login.exists() {
+            if let Ok(content) = fs::read_to_string(&pam_login) {
+                let updated = content.replace("nullok_secure", "nullok").replace("nullok", "nullok");
+                let _ = fs::write(&pam_login, updated);
+            }
+        }
+        let _ = Command::new("sh")
+            .args(&["-c", &format!("echo 'root:root' | chroot {} chpasswd -e $(openssl passwd -6 root 2>/dev/null || echo 'root')", edition_root.display())])
             .output();
         let root_dir = edition_root.join("root");
         fs::create_dir_all(&root_dir).ok();
         let start_hypr_script = r#"
-            #!/bin/bin/sh
+            #!/bin/sh
             export XDG_SESSION_TYPE=wayland
             export XDG_SESSION_DESKTOP=Hyprland
             export XDG_CURRENT_DESKTOP=Hyprland
             export XDG_RUNTIME_DIR="/run/user/0"
-            export LIBGL_ALWAYS_SOFTWARE=0
-            
+            export LIBGL_ALWAYS_SOFTWARE=1
+            export WLR_RENDERER_ALLOW_SOFTWARE=1
             mkdir -p "$XDG_RUNTIME_DIR"
             chmod 0700 "$XDG_RUNTIME_DIR"
-            
-            # Pastikan seatd service/daemon berjalan untuk manajemen DRM/Input
-            if ! pgrep -x "seatd" > /dev/null; then
+            if [ -f /usr/bin/seatd ] && ! pgrep -x "seatd" > /dev/null; then
                 seatd -g video &
                 sleep 1
             fi
-
-            sleep 1
-            # Jalankan Hyprland di dalam D-Bus Session
             exec dbus-run-session Hyprland > /tmp/hyprland.log 2>&1
         "#;
         let start_hypr_path = edition_root.join("usr/bin/start-hypr");
@@ -396,7 +401,7 @@ fn build_edition(edition: &Edition, workspace: &Path) -> Result<PathBuf, String>
         let _ = run_command("chmod", &["+x", start_hypr_path.to_str().unwrap()]);
         let zprofile_content = r#"
             if [ -z "$DISPLAY" ] && [ "$(tty)" = "/dev/tty1" ]; then
-                exec /usr/bin/start-hypr
+                /usr/bin/start-hypr
             fi
         "#;
         fs::write(root_dir.join(".zprofile"), zprofile_content).ok();
