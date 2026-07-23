@@ -227,7 +227,7 @@ const HYPRLAND_EDITION: Edition = Edition {
         "man-pages", "mkinitcpio", "util-linux", "coreutils", "findutils", "sed", "grep",
         "hyprland", "wayland", "wlroots", "mako", "waybar", "pipewire", "pipewire-pulse", 
         "alacritty", "firefox", "xwayland", "hyprpaper", "rofi", "zenity", "polkit", 
-        "polkit-gnome", "calamares",
+        "polkit-gnome", "calamares", "seatd", "mesa", "libdrm", "egl-wayland",
     ],
 };
 
@@ -358,27 +358,37 @@ fn build_edition(edition: &Edition, workspace: &Path) -> Result<PathBuf, String>
     }
     print_info("Injected zsh to /etc/profile.");
     if edition.id == "hyprland" {
-        print_info("Configuring direct autostart for Hyprland....");
+        print_info("Configuring direct autostart and seat management for Hyprland....");
+        let seatd_wants = edition_root.join("etc/systemd/system/multi-user.target.wants");
+        fs::create_dir_all(&seatd_wants).ok();
+        let seatd_service_target = "/usr/lib/systemd/system/seatd.service";
+        if edition_root.join("usr/lib/systemd/system/seatd.service").exists() {
+            let _ = std::os::unix::fs::symlink(seatd_service_target, seatd_wants.join("seatd.service"));
+        }
         let _ = Command::new("sh")
             .args(&["-c", &format!("chroot {} passwd -d root", edition_root.display())])
             .output();
         let root_dir = edition_root.join("root");
         fs::create_dir_all(&root_dir).ok();
+        let start_hypr_script = r#"
+            #!/bin/sh
+            export XDG_SESSION_TYPE=wayland
+            export XDG_SESSION_DESKTOP=Hyprland
+            export XDG_CURRENT_DESKTOP=Hyprland
+            export XDG_RUNTIME_DIR="/run/user/0"
+            export WLR_NO_HARDWARE_CURSORS=1
+            export LIBGL_ALWAYS_SOFTWARE=0
+            mkdir -p "$XDG_RUNTIME_DIR"
+            chmod 0700 "$XDG_RUNTIME_DIR"
+            sleep 1
+            exec Hyprland > /tmp/hyprland.log 2>&1
+        "#;
+        let start_hypr_path = edition_root.join("usr/bin/start-hypr");
+        fs::write(&start_hypr_path, start_hypr_script).ok();
+        let _ = run_command("chmod", &["+x", start_hypr_path.to_str().unwrap()]);
         let zprofile_content = r#"
             if [ -z "$DISPLAY" ] && [ "$(tty)" = "/dev/tty1" ]; then
-                export XDG_SESSION_TYPE=wayland
-                export XDG_SESSION_DESKTOP=Hyprland
-                export XDG_CURRENT_DESKTOP=Hyprland
-                export XDG_RUNTIME_DIR="/run/user/0"
-                mkdir -p "$XDG_RUNTIME_DIR"
-                chmod 0700 "$XDG_RUNTIME_DIR"
-                for i in $(seq 1 5); do
-                if [ -e /dev/dri/card0 ] || [ -e /dev/dri/renderD128 ]; then
-                    break
-                fi
-                sleep 1
-                done
-                exec Hyprland
+                exec /usr/bin/start-hypr
             fi
         "#;
         fs::write(root_dir.join(".zprofile"), zprofile_content).ok();
@@ -607,7 +617,7 @@ fn write_grub_cfg(path: &Path, title: &str) -> Result<(), String> {
         set timeout=5\n\
         set default=0\n\
         menuentry \"{}\" {{\n\
-            linux /boot/vmlinuz-linux rw console=tty1 loglevel=3 audit=0 systemd.show_status=1\n\
+            linux /boot/vmlinuz-linux rw console=tty1 loglevel=3 audit=0 systemd.show_status=1 quiet cow_spacesize=2G\n\
             initrd /boot/initramfs-liska.img\n\
         }}\n",
         title
