@@ -374,37 +374,50 @@ fn build_edition(edition: &Edition, workspace: &Path) -> Result<PathBuf, String>
         let root_dir = edition_root.join("root");
         fs::create_dir_all(&root_dir).ok();
         let start_hypr_script = 
-            "#!/bin/sh\n\
-             export XDG_SESSION_TYPE=wayland\n\
-             export XDG_SESSION_DESKTOP=Hyprland\n\
-             export XDG_CURRENT_DESKTOP=Hyprland\n\
-             export XDG_RUNTIME_DIR=\"/run/user/0\"\n\
-             export LIBGL_ALWAYS_SOFTWARE=1\n\
-             export WLR_RENDERER_ALLOW_SOFTWARE=1\n\
-             mkdir -p \"$XDG_RUNTIME_DIR\"\n\
-             chmod 0700 \"$XDG_RUNTIME_DIR\"\n\
-             if [ -f /usr/bin/seatd ] && ! pgrep -x \"seatd\" > /dev/null; then\n\
-                 seatd -g video &\n\
-                 sleep 1\n\
-             fi\n\
-             dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP XDG_SESSION_TYPE >/dev/null 2>&1\n\
-             systemctl --user import-environment WAYLAND_DISPLAY XDG_CURRENT_DESKTOP XDG_SESSION_TYPE >/dev/null 2>&1\n\
-             if command -v start-hyprland >/dev/null 2>&1; then\n\
-                 exec dbus-run-session start-hyprland --i-am-really-stupid > /tmp/hyprland.log 2>&1\n\
-             else\n\
-                 exec dbus-run-session Hyprland --i-am-really-stupid > /tmp/hyprland.log 2>&1\n\
-             fi
-            ";
+        "#!/bin/sh\n\
+         export XDG_SESSION_TYPE=wayland\n\
+         export XDG_SESSION_DESKTOP=Hyprland\n\
+         export XDG_CURRENT_DESKTOP=Hyprland\n\
+         export XDG_RUNTIME_DIR=\"/run/user/0\"\n\
+         export LIBSEAT_BACKEND=builtin\n\
+         export WLR_NO_HARDWARE_CURSORS=1\n\
+         export LIBGL_ALWAYS_SOFTWARE=1\n\
+         export WLR_RENDERER_ALLOW_SOFTWARE=1\n\
+         export WLR_RENDERER=pixman\n\
+         mkdir -p \"$XDG_RUNTIME_DIR\"\n\
+         chmod 0700 \"$XDG_RUNTIME_DIR\"\n\
+         if [ -z \"$DBUS_SESSION_BUS_ADDRESS\" ]; then\n\
+             eval $(dbus-launch --sh-syntax --exit-with-session)\n\
+         fi\n\
+         dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP XDG_SESSION_TYPE >/dev/null 2>&1 || true\n\
+         if command -v Hyprland >/dev/null 2>&1; then\n\
+             exec dbus-run-session Hyprland\n\
+         elif command -v start-hyprland >/dev/null 2>&1; then\n\
+             exec dbus-run-session start-hyprland\n\
+         else\n\
+             echo \"[!] CRITICAL: Hyprland not found on /usr/bin!\"\n\
+             sleep 5\n\
+         fi\n\
+        ";
         let start_hypr_path = edition_root.join("usr/bin/start-hypr");
         fs::write(&start_hypr_path, start_hypr_script).ok();
         let _ = run_command("chmod", &["+x", start_hypr_path.to_str().unwrap()]);
         let zprofile_content = 
-            "if [ -z \"$DISPLAY\" ] && [ -z \"$WAYLAND_DISPLAY\" ]; then\n\
-                /usr/bin/start-hypr\n\
-             fi
-            ";
+        "if [ \"$(tty)\" = \"/dev/tty1\" ] || [ \"$(tty)\" = \"tty1\" ]; then\n\
+            if [ -z \"$DISPLAY\" ] && [ -z \"$WAYLAND_DISPLAY\" ]; then\n\
+                echo \"[+] Booting Liska Linux Hyprland....\"\n\
+                exec /usr/bin/start-hypr\n\
+            fi\n\
+        fi\n\
+        ";
         fs::write(root_dir.join(".zprofile"), zprofile_content).ok();
         fs::write(root_dir.join(".bash_profile"), zprofile_content).ok();
+        let zlogin_content = 
+        "if [ -f ~/.zprofile ]; then\n\
+             . ~/.zprofile\n\
+         fi\n\
+        ";
+        fs::write(root_dir.join(".zlogin"), zlogin_content).ok();
         apply_dotfiles(&edition_root)?;
     }
     let os_release_src = PathBuf::from("src/os-release");
