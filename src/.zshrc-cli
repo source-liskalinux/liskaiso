@@ -2,9 +2,9 @@
 PROMPT="%B%F{cyan}[ %n@%m ]%f %F{lightgreen}%~%f %F{white}#%f%b "
 CYAN='\x1b[36m'; GREEN='\x1b[92m'; BOLD='\033[1m'; RESET='\x1b[0m'
 printf "──────────────────────────────────────────────────────────────────────────────\n\n"
-printf "${CYAN}${BOLD}::: [ LISKA LINUX CLI ] :::${RESET}\n\n"
+printf "${CYAN}${BOLD}::: [ LISKA LINUX ] :::${RESET}\n\n"
 printf "Installation guide page:\n"
-printf "${GREEN}https://liskalinux.codeberg.page/installation-guide${RESET}\n\n"
+printf "${GREEN}https://liskalinux.codeberg.page/installation-guide/${RESET}\n\n"
 printf "To connect to a Wi-Fi network, type ${CYAN}nmtui${RESET} in the terminal.\n"
 printf "For mobile broadband (WWAN) modems, type ${CYAN}mmcli${RESET} in the terminal.\n"
 printf "Ethernet, WLAN and WWAN interfaces using DHCP should work automatically.\n\n"
