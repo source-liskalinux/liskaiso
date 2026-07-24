@@ -358,64 +358,57 @@ fn build_edition(edition: &Edition, workspace: &Path) -> Result<PathBuf, String>
     }
     print_info("Injected zsh to /etc/profile.");
     if edition.id == "hyprland" {
-        print_info("Configuring direct autostart and seat management for Hyprland....");
-        let seatd_wants = edition_root.join("etc/systemd/system/multi-user.target.wants");
-        fs::create_dir_all(&seatd_wants).ok();
-        let seatd_service_target = "/usr/lib/systemd/system/seatd.service";
-        if edition_root.join("usr/lib/systemd/system/seatd.service").exists() {
-            let _ = std::os::unix::fs::symlink(seatd_service_target, seatd_wants.join("seatd.service"));
-        }
+        print_info("Configuring Systemd Hyprland Service with automatic TTY2 fallback....");
         let _ = Command::new("sh")
             .args(&["-c", &format!("chroot {} passwd -d root", edition_root.display())])
             .output();
         let _ = Command::new("sh")
             .args(&["-c", &format!("echo 'root:root' | chroot {} chpasswd", edition_root.display())])
             .output();
-        let root_dir = edition_root.join("root");
-        fs::create_dir_all(&root_dir).ok();
-        let start_hypr_script = 
-        "#!/bin/sh\n\
-         export XDG_SESSION_TYPE=wayland\n\
-         export XDG_SESSION_DESKTOP=Hyprland\n\
-         export XDG_CURRENT_DESKTOP=Hyprland\n\
-         export XDG_RUNTIME_DIR=\"/run/user/0\"\n\
-         export LIBSEAT_BACKEND=builtin\n\
-         export WLR_NO_HARDWARE_CURSORS=1\n\
-         export LIBGL_ALWAYS_SOFTWARE=1\n\
-         export WLR_RENDERER_ALLOW_SOFTWARE=1\n\
-         export WLR_RENDERER=pixman\n\
-         mkdir -p \"$XDG_RUNTIME_DIR\"\n\
-         chmod 0700 \"$XDG_RUNTIME_DIR\"\n\
-         if [ -z \"$DBUS_SESSION_BUS_ADDRESS\" ]; then\n\
-             eval $(dbus-launch --sh-syntax --exit-with-session)\n\
-         fi\n\
-         dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP XDG_SESSION_TYPE >/dev/null 2>&1 || true\n\
-         if command -v Hyprland >/dev/null 2>&1; then\n\
-             echo \"[+] Booting Liska Linux Hyprland....\"\n\
-             exec dbus-run-session start-hyprland --i-am-really-stupid\n\
-         else\n\
-             echo \"[!] CRITICAL: Hyprland not found on /usr/bin!\"\n\
-             sleep 5\n\
-         fi\n\
-        ";
-        let start_hypr_path = edition_root.join("usr/bin/start-hypr");
-        fs::write(&start_hypr_path, start_hypr_script).ok();
-        let _ = run_command("chmod", &["+x", start_hypr_path.to_str().unwrap()]);
-        let zprofile_content = 
-        "if [ \"$(tty)\" = \"/dev/tty1\" ] || [ \"$(tty)\" = \"tty1\" ]; then\n\
-            if [ -z \"$DISPLAY\" ] && [ -z \"$WAYLAND_DISPLAY\" ]; then\n\
-                exec /usr/bin/start-hypr\n\
-            fi\n\
-        fi\n\
-        ";
-        fs::write(root_dir.join(".zprofile"), zprofile_content).ok();
-        fs::write(root_dir.join(".bash_profile"), zprofile_content).ok();
-        let zlogin_content = 
-        "if [ -f ~/.zprofile ]; then\n\
-             . ~/.zprofile\n\
-         fi\n\
-        ";
-        fs::write(root_dir.join(".zlogin"), zlogin_content).ok();
+        let hyprland_service_content = 
+            "[Unit]\n\
+             Description=Hyprland Wayland Desktop Live Session\n\
+             After=systemd-user-sessions.service seatd.service dbus.service\n\
+             Conflicts=getty@tty1.service\n\
+             \n\
+             [Service]\n\
+             Type=simple\n\
+             User=root\n\
+             WorkingDirectory=/root\n\
+             Environment=XDG_SESSION_TYPE=wayland\n\
+             Environment=XDG_SESSION_DESKTOP=Hyprland\n\
+             Environment=XDG_CURRENT_DESKTOP=Hyprland\n\
+             Environment=XDG_RUNTIME_DIR=/run/user/0\n\
+             Environment=LIBSEAT_BACKEND=builtin\n\
+             Environment=WLR_NO_HARDWARE_CURSORS=1\n\
+             Environment=WLR_RENDERER_ALLOW_SOFTWARE=1\n\
+             ExecStartPre=/usr/bin/mkdir -p /run/user/0\n\
+             ExecStartPre=/usr/bin/chmod 0700 /run/user/0\n\
+             ExecStart=/usr/bin/dbus-run-session Hyprland --i-am-really-stupid\n\
+             Restart=no\n\
+             StandardOutput=journal+console\n\
+             StandardError=journal+console\n\
+             TTYPath=/dev/tty1\n\
+             TTYReset=yes\n\
+             TTYVHangup=yes\n\
+             TTYVTDisallocate=yes\n\
+             ExecStopPost=/usr/bin/sh -c '/usr/bin/chvt 2 && /usr/bin/systemctl start getty@tty2.service'\n\
+             \n\
+             [Install]\n\
+             WantedBy=multi-user.target\n\
+            ";
+        let service_path = edition_root.join("etc/systemd/system/hyprland.service");
+        fs::write(&service_path, hyprland_service_content).ok();
+        let multi_user_wants = edition_root.join("etc/systemd/system/multi-user.target.wants");
+        fs::create_dir_all(&multi_user_wants).ok();
+        let _ = std::os::unix::fs::symlink(
+            "/etc/systemd/system/hyprland.service",
+            multi_user_wants.join("hyprland.service")
+        );
+        let getty1_wants = edition_root.join("etc/systemd/system/getty.target.wants/getty@tty1.service");
+        if getty1_wants.exists() {
+            let _ = fs::remove_file(&getty1_wants);
+        }
         apply_dotfiles(&edition_root)?;
     }
     let os_release_src = PathBuf::from("src/os-release");
@@ -529,7 +522,7 @@ fn generate_pure_initramfs(rootfs: &Path, iso_root: &Path) -> Result<(), String>
     }
     let _ = run_command("ln", &["-sf", "../bin/busybox", temp_ramdisk.join("sbin/init").to_str().unwrap()]);
     let _ = run_command("ln", &["-sf", "../bin/busybox", temp_ramdisk.join("sbin/switch_root").to_str().unwrap()]);
-    let getty_dir = rootfs.join("etc/systemd/system/getty@tty1.service.d");
+    let getty_dir = rootfs.join("etc/systemd/system/getty@.service.d");
     fs::create_dir_all(&getty_dir).ok();
     let override_conf = getty_dir.join("override.conf");
     let getty_content = "[Service]\n\
