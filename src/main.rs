@@ -382,6 +382,9 @@ fn build_edition(edition: &Edition, workspace: &Path) -> Result<PathBuf, String>
              Environment=LIBSEAT_BACKEND=builtin\n\
              Environment=WLR_NO_HARDWARE_CURSORS=1\n\
              Environment=WLR_RENDERER_ALLOW_SOFTWARE=1\n\
+             Environment=LIBGL_ALWAYS_SOFTWARE=1\n\
+             Environment=GALLIUM_DRIVER=llvmpipe\n\
+             Environment=MESA_LOADER_DRIVER_OVERRIDE=llvmpipe\n\
              ExecStartPre=/usr/bin/mkdir -p /run/user/0\n\
              ExecStartPre=/usr/bin/chmod 0700 /run/user/0\n\
              ExecStart=/usr/bin/dbus-run-session Hyprland --i-am-really-stupid\n\
@@ -410,6 +413,14 @@ fn build_edition(edition: &Edition, workspace: &Path) -> Result<PathBuf, String>
             let _ = fs::remove_file(&getty1_wants);
         }
         apply_dotfiles(&edition_root)?;
+    } else if edition.id == "cli" {
+        let system_units_dir = edition_root.join("etc/systemd/system/getty.target.wants");
+        fs::create_dir_all(&system_units_dir).ok();
+        let target_getty = edition_root.join("lib/systemd/system/getty@.service");
+        let link_getty = system_units_dir.join("getty@tty1.service");
+        if target_getty.exists() && !link_getty.exists() {
+            let _ = std::os::unix::fs::symlink("../getty@.service", &link_getty);
+        }
     }
     let os_release_src = PathBuf::from("src/os-release");
     fs::create_dir_all(edition_root.join("etc")).ok();
@@ -422,13 +433,6 @@ fn build_edition(edition: &Edition, workspace: &Path) -> Result<PathBuf, String>
         let os_release_content = EMBED_OS_RELEASE.replace("{edition name}", edition.title);
         fs::write(edition_root.join("etc/os-release"), os_release_content).map_err(|e| e.to_string())?;
         print_info(&format!("Installed embedded os-release for {}.", edition.title));
-    }
-    let system_units_dir = edition_root.join("etc/systemd/system/getty.target.wants");
-    fs::create_dir_all(&system_units_dir).ok();
-    let target_getty = edition_root.join("lib/systemd/system/getty@.service");
-    let link_getty = system_units_dir.join("getty@tty1.service");
-    if target_getty.exists() && !link_getty.exists() {
-        let _ = std::os::unix::fs::symlink("../getty@.service", &link_getty);
     }
     let kernel_src = edition_root.join("boot/vmlinuz-linux");
     if !kernel_src.exists() {
