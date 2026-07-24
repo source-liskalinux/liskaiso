@@ -391,7 +391,7 @@ fn build_edition(edition: &Edition, workspace: &Path) -> Result<PathBuf, String>
          fi\n\
          dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP XDG_SESSION_TYPE >/dev/null 2>&1 || true\n\
          if command -v Hyprland >/dev/null 2>&1; then\n\
-             exec dbus-run-session Hyprland\n\
+             exec dbus-run-session Hyprland --i-am-really-stupid\n\
          elif command -v start-hyprland >/dev/null 2>&1; then\n\
              exec dbus-run-session start-hyprland\n\
          else\n\
