@@ -392,9 +392,7 @@ fn build_edition(edition: &Edition, workspace: &Path) -> Result<PathBuf, String>
          dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP XDG_SESSION_TYPE >/dev/null 2>&1 || true\n\
          if command -v Hyprland >/dev/null 2>&1; then\n\
              echo \"[+] Booting Liska Linux Hyprland....\"\n\
-             exec dbus-run-session start-hyprland\n\
-             sleep 3\n\
-             exec dbus-run-session Hyprland --i-am-really-stupid\n\
+             exec dbus-run-session start-hyprland --i-am-really-stupid\n\
          else\n\
              echo \"[!] CRITICAL: Hyprland not found on /usr/bin!\"\n\
              sleep 5\n\
