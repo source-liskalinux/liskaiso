@@ -282,6 +282,7 @@ fn build_edition(edition: &Edition, workspace: &Path) -> Result<PathBuf, String>
     let services_to_enable = &[
         ("NetworkManager.service", "/usr/lib/systemd/system/NetworkManager.service"),
         ("dbus.service", "/usr/lib/systemd/system/dbus.service"),
+        ("seatd.service", "/usr/lib/systemd/system/seatd.service"),
         ("systemd-networkd.service", "/usr/lib/systemd/system/systemd-networkd.service"),
         ("systemd-resolved.service", "/usr/lib/systemd/system/systemd-resolved.service"),
     ];
@@ -365,6 +366,9 @@ fn build_edition(edition: &Edition, workspace: &Path) -> Result<PathBuf, String>
         let _ = Command::new("sh")
             .args(&["-c", &format!("echo 'root:root' | chroot {} chpasswd", edition_root.display())])
             .output();
+        let getty1_target = edition_root.join("etc/systemd/system/getty@tty1.service");
+        let _ = fs::remove_file(&getty1_target);
+        let _ = std::os::unix::fs::symlink("/dev/null", &getty1_target);
         let hyprland_service_content = 
             "[Unit]\n\
              Description=Hyprland Wayland Desktop Live Session\n\
@@ -408,10 +412,6 @@ fn build_edition(edition: &Edition, workspace: &Path) -> Result<PathBuf, String>
             "/etc/systemd/system/hyprland.service",
             multi_user_wants.join("hyprland.service")
         );
-        let getty1_wants = edition_root.join("etc/systemd/system/getty.target.wants/getty@tty1.service");
-        if getty1_wants.exists() {
-            let _ = fs::remove_file(&getty1_wants);
-        }
         apply_dotfiles(&edition_root)?;
     } else if edition.id == "cli" {
         let system_units_dir = edition_root.join("etc/systemd/system/getty.target.wants");
