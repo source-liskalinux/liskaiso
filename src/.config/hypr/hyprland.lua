@@ -5,19 +5,35 @@ monitor = {
     ",preferred,auto,1"
 }
 
-exec_once = {
+env = {
+    "LIBVLC_PLUGIN_PATH,/usr/lib/vlc/plugins",
+    "XDG_CURRENT_DESKTOP,Hyprland",
+    "XDG_SESSION_TYPE,wayland",
+    "XDG_SESSION_DESKTOP,Hyprland"
+}
+
+exec-once = {
     "dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP",
-    "waybar",
-    "mako",
-    "hyprpaper",
-    "pipewire"
+    "systemctl --user import-environment DISPLAY WAYLAND_DISPLAY XDG_CURRENT_DESKTOP",
+    "systemctl --user start pipewire.service",
+    "systemctl --user start wireplumber.service",
+    "/usr/bin/waybar",
+    "/usr/bin/mako",
+    "/usr/bin/hyprpaper"
+}
+
+cursor = {
+    no_hardware_cursors = true,
+    no_break_fs_cursor = false
 }
 
 input = {
     kb_layout = "us",
     follow_mouse = 1,
+    sensitivity = 0.5,
     touchpad = {
-        natural_scroll = true
+        natural_scroll = true,
+        drag_lock = false
     }
 }
 
@@ -28,7 +44,8 @@ general = {
     ["col.active_border"] = "rgba(58a6ffee) rgba(39c5bbee) 45deg",
     ["col.inactive_border"] = "rgba(161b22aa)",
     layout = "dwindle",
-    no_cursor_warps = true
+    no_cursor_warps = true,
+    allow_tearing = true
 }
 
 decoration = {
@@ -64,19 +81,27 @@ animations = {
     }
 }
 
+dwindle = {
+    preserve_split = true,
+    smart_split = true,
+    smart_resizing = true
+}
+
 local mainMod = "SUPER"
 
 bind = {
-    mainMod .. ", Return, exec, alacritty",
-    mainMod .. ", B, exec, firefox",
+    mainMod .. ", Return, exec, /usr/bin/alacritty",
+    mainMod .. ", B, exec, /usr/bin/firefox",
     mainMod .. ", Q, killactive,",
     mainMod .. " SHIFT, E, exit,",
-    mainMod .. ", Space, exec, rofi -show drun",
+    mainMod .. ", Space, exec, /usr/bin/rofi -show drun",
     mainMod .. ", F, fullscreen,",
+    mainMod .. ", M, fullscreen, 1",
     mainMod .. ", V, togglefloating,",
     mainMod .. ", P, pseudo,",
-    mainMod .. ", W, exec, ~/.config/hypr/scripts/set-wallpaper.sh",
-    mainMod .. ", S, exec, ~/.config/hypr/scripts/launch-installer.sh",
+    mainMod .. ", J, togglesplit,",
+    mainMod .. ", W, exec, $HOME/.config/hypr/scripts/set-wallpaper.sh",
+    mainMod .. ", S, exec, pkexec $HOME/.config/hypr/scripts/launch-installer.sh",
     mainMod .. ", 1, workspace, 1",
     mainMod .. ", 2, workspace, 2",
     mainMod .. ", 3, workspace, 3",
@@ -86,5 +111,9 @@ bind = {
     mainMod .. " SHIFT, 2, movetoworkspace, 2",
     mainMod .. " SHIFT, 3, movetoworkspace, 3",
     mainMod .. " SHIFT, 4, movetoworkspace, 4",
-    mainMod .. " SHIFT, 5, movetoworkspace, 5"
+    mainMod .. " SHIFT, 5, movetoworkspace, 5",
+    mainMod .. ", left, movefocus, l",
+    mainMod .. ", right, movefocus, r",
+    mainMod .. ", up, movefocus, u",
+    mainMod .. ", down, movefocus, d"
 }

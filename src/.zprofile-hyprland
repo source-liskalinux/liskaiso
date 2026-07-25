@@ -1,0 +1,13 @@
+#!/bin/bash
+# Liska Linux Hyprland auto-launcher
+
+if [ "$(tty)" = "/dev/tty1" ] && [ -z "$DISPLAY" ] && [ -z "$WAYLAND_DISPLAY" ]; then
+    clear
+    printf '─────────────────────────────────────────────────────────────────────────────────────────────\n\n'
+    printf '\033[36m\033[1m:::[ Liska Linux Hyprland ]:::\033[0m\n\n'
+    printf 'Welcome to Liska Linux Hyprland!\n'
+    printf 'Type \033[92mhyprland\033[0m to start the Graphical Desktop (GUI).\n'
+    printf 'Or type \033[92mstart-hypr\033[0m as an alternative.\n\n'
+    printf 'For help, type \033[92mhelp\033[0m or visit https://wiki.hyprland.org\n\n'
+    printf '─────────────────────────────────────────────────────────────────────────────────────────────\n\n'
+fi

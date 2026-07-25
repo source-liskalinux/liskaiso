@@ -32,7 +32,7 @@
     },
     "custom/installer": {
         "format": "󰐕 Install Liska Linux",
-        "on-click": "~/.config/hypr/scripts/launch-installer.sh",
+        "on-click": "pkexec $HOME/.config/hypr/scripts/launch-installer.sh",
         "tooltip": true,
         "tooltip-format": "Run Liska Linux Installer (Super + S)"
     }
