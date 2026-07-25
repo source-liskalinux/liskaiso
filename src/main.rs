@@ -213,6 +213,7 @@ const CLI_EDITION: Edition = Edition {
         "networkmanager", "modemmanager", "usb_modeswitch", "inetutils", "bash",
         "nano", "vim", "grub", "libverto", "wget", "curl", "git", "which", "man-db",
         "man-pages", "mkinitcpio", "util-linux", "coreutils", "findutils", "sed", "grep",
+        "kmod",
     ],
 };
 
@@ -225,9 +226,9 @@ const HYPRLAND_EDITION: Edition = Edition {
         "networkmanager", "modemmanager", "usb_modeswitch", "inetutils", "bash",
         "nano", "vim", "grub", "libverto", "wget", "curl", "git", "which", "man-db",
         "man-pages", "mkinitcpio", "util-linux", "coreutils", "findutils", "sed", "grep",
-        "hyprland", "wayland", "wlroots", "mako", "waybar", "pipewire", "pipewire-pulse", 
-        "alacritty", "firefox", "xwayland", "hyprpaper", "rofi", "zenity", "polkit", 
-        "polkit-gnome", "calamares", "seatd", "mesa", "libdrm", "egl-wayland", "fastfetch",
+        "kmod", "hyprland", "wayland", "wlroots", "mako", "waybar", "pipewire", 
+        "pipewire-pulse", "alacritty", "firefox", "xwayland", "hyprpaper", "rofi", "zenity", 
+        "polkit", "polkit-gnome", "calamares", "seatd", "mesa", "libdrm", "egl-wayland", "fastfetch",
     ],
 };
 
@@ -382,6 +383,12 @@ fn build_edition(edition: &Edition, workspace: &Path) -> Result<PathBuf, String>
              export LIBGL_ALWAYS_SOFTWARE=1\n\
              export GALLIUM_DRIVER=llvmpipe\n\
              export MESA_LOADER_DRIVER_OVERRIDE=llvmpipe\n\
+             for i in $(seq 1 10); do\n\
+                 if [ -e /dev/dri/card0 ] || [ -e /dev/dri/renderD128 ]; then\n\
+                     break\n\
+                 fi\n\
+                 sleep 1\n\
+             done\n\
              printf \"\\033[36m[i]\\033[0m Entering Hyprland desktop environment....\\n\"\n\
              exec dbus-run-session /usr/bin/Hyprland --i-am-really-stupid\n\
             ";
@@ -615,6 +622,11 @@ fn generate_pure_initramfs(rootfs: &Path, iso_root: &Path) -> Result<(), String>
         if [ -n \"$SYSTEMD_PATH\" ]; then\n\
             TARGET=\"${{SYSTEMD_PATH#/new_root}}\"\n\
             printf \"${{CYAN}}[+]${{RESET}} ${{GREEN}}${{BOLD}}Systemd was found! Initializing systemd.${{RESET}}\\n\"\n\
+            modprobe i915 2>/dev/null || true\n\
+            modprobe amdgpu 2>/dev/null || true\n\
+            modprobe radeon 2>/dev/null || true\n\
+            modprobe nouveau 2>/dev/null || true\n\
+            modprobe virtio_gpu 2>/dev/null || true\n\
             exec switch_root /new_root \"$TARGET\" --show-status=1\n\
         else\n\
             printf \"${{CYAN}}[-]${{RESET}} ${{RED}}${{BOLD}}CRITICAL: Systemd not found! Falling back to bash shell.${{RESET}}\\n\"\n\
