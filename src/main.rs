@@ -344,13 +344,13 @@ fn build_edition(edition: &Edition, workspace: &Path) -> Result<PathBuf, String>
         }
     }
     let profile_path = edition_root.join("etc/profile");
-    let auto_zsh_script = "
-    if [ -t 1 ] && [ -n \"$PS1\" ] && [ -x /usr/bin/zsh ] && [ \"$(basename \"$SHELL\")\" != \"zsh\" ]; then
-        export SHELL=/usr/bin/zsh
-        export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-        exec /usr/bin/zsh -l
-    fi
-    ";
+    let auto_zsh_script = 
+        "if [ -t 1 ] && [ -n \"$PS1\" ] && [ -x /usr/bin/zsh ] && [ \"$(basename \"$SHELL\")\" = \"bash\" ]; then\n\
+             export SHELL=/usr/bin/zsh\n\
+             export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\n\
+             exec /usr/bin/zsh -l\n\
+         fi\n\
+        ";
     if let Ok(mut current_profile) = fs::read_to_string(&profile_path) {
         current_profile.push_str(auto_zsh_script);
         let _ = fs::write(&profile_path, current_profile);
@@ -359,7 +359,7 @@ fn build_edition(edition: &Edition, workspace: &Path) -> Result<PathBuf, String>
     }
     print_info("Injected zsh to /etc/profile.");
     if edition.id == "hyprland" {
-        print_info("Configuring Systemd Hyprland Service with .zprofile launcher & TTY2 fallback....");
+        print_info("Configuring Systemd Hyprland Service with .zprofile launcher and TTY2 fallback....");
         let _ = Command::new("sh")
             .args(&["-c", &format!("chroot {} passwd -d root", edition_root.display())])
             .output();
@@ -382,14 +382,14 @@ fn build_edition(edition: &Edition, workspace: &Path) -> Result<PathBuf, String>
              export LIBGL_ALWAYS_SOFTWARE=1\n\
              export GALLIUM_DRIVER=llvmpipe\n\
              export MESA_LOADER_DRIVER_OVERRIDE=llvmpipe\n\
-             printf \"033[36m[i]033[0m Entering Hyprland desktop environment....\"\n\
+             printf \"\\033[36m[i]\\033[0m Entering Hyprland desktop environment....\\n\"\n\
              exec dbus-run-session /usr/bin/Hyprland --i-am-really-stupid\n\
             ";
         fs::write(&zprofile_path, zprofile_content).ok();
         let hyprland_service_content = 
             "[Unit]\n\
              Description=Hyprland Wayland Desktop Live Session\n\
-             After=systemd-user-sessions.service seatd.service dbus.service\n\
+             After=systemd-user-sessions.service seatd.service dbus.service systemd-logind.service\n\
              Wants=dbus.service seatd.service\n\
              Conflicts=getty@tty1.service\n\
              \n\
@@ -399,7 +399,7 @@ fn build_edition(edition: &Edition, workspace: &Path) -> Result<PathBuf, String>
              WorkingDirectory=/root\n\
              ExecStartPre=/usr/bin/mkdir -p /run/user/0\n\
              ExecStartPre=/usr/bin/chmod 0700 /run/user/0\n\
-             ExecStartPre=/usr/bin/sleep 1\n\
+             ExecStartPre=/usr/bin/sleep 2\n\
              ExecStart=/usr/bin/zsh -l\n\
              Restart=no\n\
              StandardInput=tty\n\
@@ -415,7 +415,6 @@ fn build_edition(edition: &Edition, workspace: &Path) -> Result<PathBuf, String>
              [Install]\n\
              WantedBy=multi-user.target\n\
             ";
-
         let service_path = edition_root.join("etc/systemd/system/hyprland.service");
         fs::write(&service_path, hyprland_service_content).ok();
         let multi_user_wants = edition_root.join("etc/systemd/system/multi-user.target.wants");
