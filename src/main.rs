@@ -375,7 +375,7 @@ fn build_edition(edition: &Edition, workspace: &Path) -> Result<PathBuf, String>
         fs::write(getty1_dir.join("override.conf"), getty1_override).ok();
         let helper_script = edition_root.join("usr/bin/start-hypr");
         let helper_content = 
-            "#!/bin/bin/sh\n\
+            "#!/bin/sh\n\
              export XDG_SESSION_TYPE=wayland\n\
              export XDG_SESSION_DESKTOP=Hyprland\n\
              export XDG_CURRENT_DESKTOP=Hyprland\n\
@@ -394,18 +394,37 @@ fn build_edition(edition: &Edition, workspace: &Path) -> Result<PathBuf, String>
             .args(&["+x", helper_script.to_str().unwrap()])
             .output();
         let zprofile_path = edition_root.join("root/.zprofile");
-        let zprofile_content = 
-            "if [ \"$(tty)\" = \"/dev/tty1\" ]; then\n\
-                 clear\n\
-                 printf \"─────────────────────────────────────────────────────────────────────────────────────────────\\n\\n\"\n\
-                 printf \"\\033[36m\\033[1m:::[ Liska Linux Hyprland ]:::\\033[0m\\n\\n\"\n\
-                 printf \"Welcome to Liska Linux Hyprland! Unfortunately, we can't make Hyprland run automatically\\n\"\n\
-                 printf \"like KDE Plasma or GNOME. We still try to solve this as soon as possible.\\n\"\n\
-                 printf \"To start the Graphical Desktop (GUI), type \\x1b[92mstart-hypr\\033[0m on the terminal.\\n\\n\"\n\
-                 printf \"─────────────────────────────────────────────────────────────────────────────────────────────\\n\\n\"\n\
-             fi\n\
-            ";
-        fs::write(&zprofile_path, zprofile_content).ok();
+        let zprofile_candidates = [
+            PathBuf::from("src/.zprofile-hyprland"),
+            PathBuf::from("src/.zprofile"),
+        ];
+        let mut zprofile_placed = false;
+        for candidate in &zprofile_candidates {
+            if candidate.exists() {
+                if let Ok(content) = fs::read_to_string(candidate) {
+                    let _ = fs::write(&zprofile_path, content);
+                    print_info(&format!("Integrated custom {} to /root/.zprofile....", candidate.display()));
+                    zprofile_placed = true;
+                    break;
+                }
+            }
+        }
+        if !zprofile_placed {
+            let default_zprofile = 
+                "if [ \"$(tty)\" = \"/dev/tty1\" ]; then\n\
+                     clear\n\
+                     printf \"─────────────────────────────────────────────────────────────────────────────────────────────\\n\\n\"\n\
+                     printf \"\\033[36m\\033[1m:::[ Liska Linux Hyprland ]:::\\033[0m\\n\\n\"\n\
+                     printf \"Welcome to Liska Linux Hyprland!\\n\"\n\
+                     printf \"Type \\033[92mstart-hypr\\033[0m to start the Graphical Desktop (GUI).\\n\"\n\
+                     printf \"Type \\033[92mhyprland\\033[0m as an alternative launcher.\\n\\n\"\n\
+                     printf \"For help, visit https://wiki.hyprland.org\\n\\n\"\n\
+                     printf \"─────────────────────────────────────────────────────────────────────────────────────────────\\n\\n\"\n\
+                 fi\n\
+                ";
+            let _ = fs::write(&zprofile_path, default_zprofile);
+            print_info("Installed default .zprofile for Hyprland to /root/.zprofile....");
+        }
         apply_dotfiles(&edition_root)?;
     } else if edition.id == "cli" {
         let system_units_dir = edition_root.join("etc/systemd/system/getty.target.wants");

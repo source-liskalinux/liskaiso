@@ -9,7 +9,7 @@
     "modules-center": ["clock"],
     "modules-right": ["pulseaudio", "network", "custom/installer", "tray"],
     "custom/launcher": {
-        "format": "󰣇 Liska",
+        "format": "Liska Linux",
         "on-click": "rofi -show drun",
         "tooltip": false
     },
