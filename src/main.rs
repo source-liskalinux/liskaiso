@@ -373,6 +373,7 @@ fn build_edition(edition: &Edition, workspace: &Path) -> Result<PathBuf, String>
             "[Unit]\n\
              Description=Hyprland Wayland Desktop Live Session\n\
              After=systemd-user-sessions.service seatd.service dbus.service\n\
+             Wants=dbus.service seatd.service\n\
              Conflicts=getty@tty1.service\n\
              \n\
              [Service]\n\
@@ -391,14 +392,17 @@ fn build_edition(edition: &Edition, workspace: &Path) -> Result<PathBuf, String>
              Environment=MESA_LOADER_DRIVER_OVERRIDE=llvmpipe\n\
              ExecStartPre=/usr/bin/mkdir -p /run/user/0\n\
              ExecStartPre=/usr/bin/chmod 0700 /run/user/0\n\
-             ExecStart=/usr/bin/dbus-run-session Hyprland --i-am-really-stupid\n\
+             ExecStartPre=/usr/bin/sleep 1\n\
+             ExecStart=/usr/bin/dbus-run-session /usr/bin/Hyprland --i-am-really-stupid\n\
              Restart=no\n\
+             StandardInput=tty\n\
              StandardOutput=journal+console\n\
              StandardError=journal+console\n\
              TTYPath=/dev/tty1\n\
              TTYReset=yes\n\
              TTYVHangup=yes\n\
              TTYVTDisallocate=yes\n\
+             PAMName=login\n\
              ExecStopPost=/usr/bin/sh -c '/usr/bin/chvt 2 && /usr/bin/systemctl start getty@tty2.service'\n\
              \n\
              [Install]\n\
