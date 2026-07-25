@@ -396,12 +396,13 @@ fn build_edition(edition: &Edition, workspace: &Path) -> Result<PathBuf, String>
         let zprofile_path = edition_root.join("root/.zprofile");
         let zprofile_content = 
             "if [ \"$(tty)\" = \"/dev/tty1\" ]; then\n\
+                 clear\n\
                  printf \"─────────────────────────────────────────────────────────────────────────────────────────────\\n\\n\"\n\
                  printf \"\\033[36m\\033[1m:::[ Liska Linux Hyprland ]:::\\033[0m\\n\\n\"\n\
                  printf \"Welcome to Liska Linux Hyprland! Unfortunately, we can't make Hyprland run automatically\\n\"\n\
                  printf \"like KDE Plasma or GNOME. We still try to solve this as soon as possible.\\n\"\n\
-                 printf \"To start the Graphical Desktop (GUI), type\\x1b[92mstart-hypr\\033[0m on the terminal.\\n\\n\"\n\
-                 printf \"─────────────────────────────────────────────────────────────────────────────────────────────\n\\n\"\n\
+                 printf \"To start the Graphical Desktop (GUI), type \\x1b[92mstart-hypr\\033[0m on the terminal.\\n\\n\"\n\
+                 printf \"─────────────────────────────────────────────────────────────────────────────────────────────\\n\\n\"\n\
              fi\n\
             ";
         fs::write(&zprofile_path, zprofile_content).ok();
