@@ -213,7 +213,7 @@ const CLI_EDITION: Edition = Edition {
         "networkmanager", "modemmanager", "usb_modeswitch", "inetutils", "bash",
         "nano", "vim", "grub", "libverto", "wget", "curl", "git", "which", "man-db",
         "man-pages", "mkinitcpio", "util-linux", "coreutils", "findutils", "sed", "grep",
-        "kmod",
+        "kmod", "virtualbox-guest-utils", "xf86-video-vmware", "xf86-video-vesa"
     ],
 };
 
@@ -229,6 +229,7 @@ const HYPRLAND_EDITION: Edition = Edition {
         "kmod", "hyprland", "wayland", "wlroots", "mako", "waybar", "pipewire", 
         "pipewire-pulse", "alacritty", "firefox", "xwayland", "hyprpaper", "rofi", "zenity", 
         "polkit", "polkit-gnome", "calamares", "seatd", "mesa", "libdrm", "egl-wayland", "fastfetch",
+        "virtualbox-guest-utils", "xf86-video-vmware", "xf86-video-vesa"
     ],
 };
 
@@ -383,14 +384,21 @@ fn build_edition(edition: &Edition, workspace: &Path) -> Result<PathBuf, String>
              export LIBGL_ALWAYS_SOFTWARE=1\n\
              export GALLIUM_DRIVER=llvmpipe\n\
              export MESA_LOADER_DRIVER_OVERRIDE=llvmpipe\n\
+             prinf \"\\033[36m[+]\\033[0m Initializing GPU....\"\n\
+             FOUND_GPU=0\n\
              for i in $(seq 1 10); do\n\
                  if [ -e /dev/dri/card0 ] || [ -e /dev/dri/renderD128 ]; then\n\
+                     FOUND_GPU=1\n\
                      break\n\
                  fi\n\
                  sleep 1\n\
              done\n\
-             printf \"\\033[36m[i]\\033[0m Entering Hyprland desktop environment....\\n\"\n\
-             exec dbus-run-session /usr/bin/Hyprland --i-am-really-stupid\n\
+             if [ \"$FOUND_GPU\" -eq 1 ]; then\n\
+                 printf \"\\033[36m[+]\\033[0m \\033[92m\\033[1mGPU has been found. Launching Hyprland....\\033[0m\\n\"\n\
+                 exec dbus-run-session /usr/bin/Hyprland --i-am-really-stupid\n\
+             else\n\
+                 printf \"\\033[36m[-]\\033[0m \\033[31m\\033[1mGPU not found! Falling back to zsh shell.\\033[0m\\n\"\n\
+             fi\n\
             ";
         fs::write(&zprofile_path, zprofile_content).ok();
         let hyprland_service_content = 
@@ -537,7 +545,7 @@ fn generate_pure_initramfs(rootfs: &Path, iso_root: &Path) -> Result<(), String>
             }
         }
     }
-    for link in &["sh", "mount", "umount", "sleep", "switch_root", "init", "mdev", "insmod", "find"] {
+    for link in &["sh", "mount", "umount", "sleep", "switch_root", "init", "mdev", "insmod", "modprobe", "find"] {
         let link_path = temp_ramdisk.join("bin").join(link);
         let _ = fs::remove_file(&link_path);
         let _ = run_command("ln", &["-sf", "busybox", link_path.to_str().unwrap()]);
@@ -627,6 +635,7 @@ fn generate_pure_initramfs(rootfs: &Path, iso_root: &Path) -> Result<(), String>
             modprobe radeon 2>/dev/null || true\n\
             modprobe nouveau 2>/dev/null || true\n\
             modprobe virtio_gpu 2>/dev/null || true\n\
+            modprobe vboxvideo 2>/dev/null || true\n\
             exec switch_root /new_root \"$TARGET\" --show-status=1\n\
         else\n\
             printf \"${{CYAN}}[-]${{RESET}} ${{RED}}${{BOLD}}CRITICAL: Systemd not found! Falling back to bash shell.${{RESET}}\\n\"\n\
