@@ -361,7 +361,7 @@ fn build_edition(edition: &Edition, workspace: &Path) -> Result<PathBuf, String>
     }
     print_info("Injected zsh to /etc/profile.");
     if edition.id == "hyprland" {
-        print_info("Configuring autologin TTY1 and fallback TTY2 for Hyprland...");
+        print_info("Configuring autologin and welcome banner for Hyprland...");
         let _ = Command::new("sh")
             .args(&["-c", &format!("chroot {} passwd -d root", edition_root.display())])
             .output();
@@ -373,39 +373,35 @@ fn build_edition(edition: &Edition, workspace: &Path) -> Result<PathBuf, String>
              ExecStart=-/usr/sbin/agetty --autologin root --noclear %I $TERM\n
             ";
         fs::write(getty1_dir.join("override.conf"), getty1_override).ok();
-        let getty_wants = edition_root.join("etc/systemd/system/getty.target.wants");
-        fs::create_dir_all(&getty_wants).ok();
-        let _ = std::os::unix::fs::symlink(
-            "/usr/lib/systemd/system/getty@.service",
-            getty_wants.join("getty@tty2.service")
-        );
+        let helper_script = edition_root.join("usr/bin/start-hypr");
+        let helper_content = 
+            "#!/bin/bin/sh\n\
+             export XDG_SESSION_TYPE=wayland\n\
+             export XDG_SESSION_DESKTOP=Hyprland\n\
+             export XDG_CURRENT_DESKTOP=Hyprland\n\
+             export XDG_RUNTIME_DIR=/run/user/0\n\
+             mkdir -p /run/user/0 && chmod 0700 /run/user/0\n\
+             export WLR_NO_HARDWARE_CURSORS=1\n\
+             export WLR_RENDERER_ALLOW_SOFTWARE=1\n\
+             export LIBGL_ALWAYS_SOFTWARE=1\n\
+             export GALLIUM_DRIVER=llvmpipe\n\
+             export MESA_LOADER_DRIVER_OVERRIDE=llvmpipe\n\
+             printf \"\\033[36m[i]\\033[0m Initializing Hyprland....\\n\"\n\
+             exec dbus-run-session Hyprland --i-am-really-stupid \"$@\"\n
+            ";
+        fs::write(&helper_script, helper_content).ok();
+        let _ = Command::new("chmod")
+            .args(&["+x", helper_script.to_str().unwrap()])
+            .output();
         let zprofile_path = edition_root.join("root/.zprofile");
         let zprofile_content = 
             "if [ \"$(tty)\" = \"/dev/tty1\" ]; then\n\
-                 export XDG_SESSION_TYPE=wayland\n\
-                 export XDG_SESSION_DESKTOP=Hyprland\n\
-                 export XDG_CURRENT_DESKTOP=Hyprland\n\
-                 export XDG_RUNTIME_DIR=/run/user/0\n\
-                 mkdir -p /run/user/0 && chmod 0700 /run/user/0\n\
-                 export LIBSEAT_BACKEND=builtin\n\
-                 export WLR_NO_HARDWARE_CURSORS=1\n\
-                 export WLR_RENDERER_ALLOW_SOFTWARE=1\n\
-                 export LIBGL_ALWAYS_SOFTWARE=1\n\
-                 export GALLIUM_DRIVER=llvmpipe\n\
-                 export MESA_LOADER_DRIVER_OVERRIDE=llvmpipe\n\
-                 export WLR_BACKEND=pixman\n\
-                 printf \"\\033[36m[i]\\033[0m Initializing....\\n\"\n\
-                 for i in $(seq 1 5); do\n\
-                     if [ -e /dev/dri/card0 ] || [ -e /dev/dri/renderD128 ]; then\n\
-                         break\n\
-                     fi\n\
-                     sleep 1\n\
-                 done\n\
-                 printf \"\\033[36m[i]\\033[0m Starting Hyprland environment....\\n\"\n\
-                 dbus-run-session Hyprland --i-am-really-stupid > /tmp/hyprland.log 2>&1\n\
-                 printf \"\\033[36m[-]\\033[0m \\033[31m\\033[1mHyprland crashed! Redirecting to TTY2 shell....\\033[0m\\n\"\n\
-                 sleep 1\n\
-                 chvt 2\n\
+                 printf \"─────────────────────────────────────────────────────────────────────────────────────────────\\n\\n\"\n\
+                 printf \"\\033[36m\\033[1m:::[ Liska Linux Hyprland ]:::\\033[0m\\n\\n\"\n\
+                 printf \"Welcome to Liska Linux Hyprland! Unfortunately, we can't make Hyprland run automatically\\n\"\n\
+                 printf \"like KDE Plasma or GNOME. We still try to solve this as soon as possible.\\n\"\n\
+                 printf \"To start the Graphical Desktop (GUI), type\\x1b[92mstart-hypr\\033[0m on the terminal.\\n\\n\"\n\
+                 printf \"─────────────────────────────────────────────────────────────────────────────────────────────\n\\n\"\n\
              fi\n\
             ";
         fs::write(&zprofile_path, zprofile_content).ok();
