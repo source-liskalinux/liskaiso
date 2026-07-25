@@ -361,83 +361,54 @@ fn build_edition(edition: &Edition, workspace: &Path) -> Result<PathBuf, String>
     }
     print_info("Injected zsh to /etc/profile.");
     if edition.id == "hyprland" {
-        print_info("Configuring Systemd Hyprland Service with .zprofile launcher and TTY2 fallback....");
+        print_info("Configuring autologin TTY1 and fallback TTY2 for Hyprland...");
         let _ = Command::new("sh")
             .args(&["-c", &format!("chroot {} passwd -d root", edition_root.display())])
             .output();
-        let _ = Command::new("sh")
-            .args(&["-c", &format!("echo 'root:root' | chroot {} chpasswd", edition_root.display())])
-            .output();
-        let getty1_target = edition_root.join("etc/systemd/system/getty@tty1.service");
-        let _ = fs::remove_file(&getty1_target);
-        let _ = std::os::unix::fs::symlink("/dev/null", &getty1_target);
+        let getty1_dir = edition_root.join("etc/systemd/system/getty@tty1.service.d");
+        fs::create_dir_all(&getty1_dir).ok();
+        let getty1_override = 
+            "[Service]\n\
+             ExecStart=\n\
+             ExecStart=-/usr/sbin/agetty --autologin root --noclear %I $TERM\n
+            ";
+        fs::write(getty1_dir.join("override.conf"), getty1_override).ok();
+        let getty_wants = edition_root.join("etc/systemd/system/getty.target.wants");
+        fs::create_dir_all(&getty_wants).ok();
+        let _ = std::os::unix::fs::symlink(
+            "/usr/lib/systemd/system/getty@.service",
+            getty_wants.join("getty@tty2.service")
+        );
         let zprofile_path = edition_root.join("root/.zprofile");
         let zprofile_content = 
-            "export XDG_SESSION_TYPE=wayland\n\
-             export XDG_SESSION_DESKTOP=Hyprland\n\
-             export XDG_CURRENT_DESKTOP=Hyprland\n\
-             export XDG_RUNTIME_DIR=/run/user/0\n\
-             mkdir -p /run/user/0 && chmod 0700 /run/user/0\n\
-             export LIBSEAT_BACKEND=builtin\n\
-             export WLR_NO_HARDWARE_CURSORS=1\n\
-             export WLR_RENDERER_ALLOW_SOFTWARE=1\n\
-             export LIBGL_ALWAYS_SOFTWARE=1\n\
-             export GALLIUM_DRIVER=llvmpipe\n\
-             export MESA_LOADER_DRIVER_OVERRIDE=llvmpipe\n\
-             prinf \"\\033[36m[+]\\033[0m Initializing GPU....\"\n\
-             FOUND_GPU=0\n\
-             for i in $(seq 1 10); do\n\
-                 if [ -e /dev/dri/card0 ] || [ -e /dev/dri/renderD128 ]; then\n\
-                     FOUND_GPU=1\n\
-                     break\n\
-                 fi\n\
+            "if [ \"$(tty)\" = \"/dev/tty1\" ]; then\n\
+                 export XDG_SESSION_TYPE=wayland\n\
+                 export XDG_SESSION_DESKTOP=Hyprland\n\
+                 export XDG_CURRENT_DESKTOP=Hyprland\n\
+                 export XDG_RUNTIME_DIR=/run/user/0\n\
+                 mkdir -p /run/user/0 && chmod 0700 /run/user/0\n\
+                 export LIBSEAT_BACKEND=builtin\n\
+                 export WLR_NO_HARDWARE_CURSORS=1\n\
+                 export WLR_RENDERER_ALLOW_SOFTWARE=1\n\
+                 export LIBGL_ALWAYS_SOFTWARE=1\n\
+                 export GALLIUM_DRIVER=llvmpipe\n\
+                 export MESA_LOADER_DRIVER_OVERRIDE=llvmpipe\n\
+                 export WLR_BACKEND=pixman\n\
+                 printf \"\\033[36m[i]\\033[0m Initializing....\\n\"\n\
+                 for i in $(seq 1 5); do\n\
+                     if [ -e /dev/dri/card0 ] || [ -e /dev/dri/renderD128 ]; then\n\
+                         break\n\
+                     fi\n\
+                     sleep 1\n\
+                 done\n\
+                 printf \"\\033[36m[i]\\033[0m Starting Hyprland environment....\\n\"\n\
+                 dbus-run-session Hyprland --i-am-really-stupid > /tmp/hyprland.log 2>&1\n\
+                 printf \"\\033[36m[-]\\033[0m \\033[31m\\033[1mHyprland crashed! Redirecting to TTY2 shell....\\033[0m\\n\"\n\
                  sleep 1\n\
-             done\n\
-             if [ \"$FOUND_GPU\" -eq 1 ]; then\n\
-                 printf \"\\033[36m[+]\\033[0m \\033[92m\\033[1mGPU has been found. Launching Hyprland....\\033[0m\\n\"\n\
-                 exec dbus-run-session /usr/bin/Hyprland --i-am-really-stupid\n\
-             else\n\
-                 printf \"\\033[36m[-]\\033[0m \\033[31m\\033[1mGPU not found! Falling back to zsh shell.\\033[0m\\n\"\n\
+                 chvt 2\n\
              fi\n\
             ";
         fs::write(&zprofile_path, zprofile_content).ok();
-        let hyprland_service_content = 
-            "[Unit]\n\
-             Description=Hyprland Wayland Desktop Live Session\n\
-             After=systemd-user-sessions.service seatd.service dbus.service systemd-logind.service\n\
-             Wants=dbus.service seatd.service\n\
-             Conflicts=getty@tty1.service\n\
-             \n\
-             [Service]\n\
-             Type=simple\n\
-             User=root\n\
-             WorkingDirectory=/root\n\
-             ExecStartPre=/usr/bin/mkdir -p /run/user/0\n\
-             ExecStartPre=/usr/bin/chmod 0700 /run/user/0\n\
-             ExecStartPre=/usr/bin/sleep 2\n\
-             ExecStart=/usr/bin/zsh -l\n\
-             Restart=no\n\
-             StandardInput=tty\n\
-             StandardOutput=journal+console\n\
-             StandardError=journal+console\n\
-             TTYPath=/dev/tty1\n\
-             TTYReset=yes\n\
-             TTYVHangup=yes\n\
-             TTYVTDisallocate=yes\n\
-             PAMName=login\n\
-             ExecStopPost=/usr/bin/sh -c '/usr/bin/chvt 2 && /usr/bin/systemctl start getty@tty2.service'\n\
-             \n\
-             [Install]\n\
-             WantedBy=multi-user.target\n\
-            ";
-        let service_path = edition_root.join("etc/systemd/system/hyprland.service");
-        fs::write(&service_path, hyprland_service_content).ok();
-        let multi_user_wants = edition_root.join("etc/systemd/system/multi-user.target.wants");
-        fs::create_dir_all(&multi_user_wants).ok();
-        let _ = std::os::unix::fs::symlink(
-            "/etc/systemd/system/hyprland.service",
-            multi_user_wants.join("hyprland.service")
-        );
         apply_dotfiles(&edition_root)?;
     } else if edition.id == "cli" {
         let system_units_dir = edition_root.join("etc/systemd/system/getty.target.wants");
