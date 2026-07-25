@@ -359,7 +359,7 @@ fn build_edition(edition: &Edition, workspace: &Path) -> Result<PathBuf, String>
     }
     print_info("Injected zsh to /etc/profile.");
     if edition.id == "hyprland" {
-        print_info("Configuring Systemd Hyprland Service with automatic TTY2 fallback....");
+        print_info("Configuring Systemd Hyprland Service with .zprofile launcher & TTY2 fallback....");
         let _ = Command::new("sh")
             .args(&["-c", &format!("chroot {} passwd -d root", edition_root.display())])
             .output();
@@ -369,6 +369,23 @@ fn build_edition(edition: &Edition, workspace: &Path) -> Result<PathBuf, String>
         let getty1_target = edition_root.join("etc/systemd/system/getty@tty1.service");
         let _ = fs::remove_file(&getty1_target);
         let _ = std::os::unix::fs::symlink("/dev/null", &getty1_target);
+        let zprofile_path = edition_root.join("root/.zprofile");
+        let zprofile_content = 
+            "export XDG_SESSION_TYPE=wayland\n\
+             export XDG_SESSION_DESKTOP=Hyprland\n\
+             export XDG_CURRENT_DESKTOP=Hyprland\n\
+             export XDG_RUNTIME_DIR=/run/user/0\n\
+             mkdir -p /run/user/0 && chmod 0700 /run/user/0\n\
+             export LIBSEAT_BACKEND=builtin\n\
+             export WLR_NO_HARDWARE_CURSORS=1\n\
+             export WLR_RENDERER_ALLOW_SOFTWARE=1\n\
+             export LIBGL_ALWAYS_SOFTWARE=1\n\
+             export GALLIUM_DRIVER=llvmpipe\n\
+             export MESA_LOADER_DRIVER_OVERRIDE=llvmpipe\n\
+             printf \"033[36m[i]033[0m Entering Hyprland desktop environment....\"\n\
+             exec dbus-run-session /usr/bin/Hyprland --i-am-really-stupid\n\
+            ";
+        fs::write(&zprofile_path, zprofile_content).ok();
         let hyprland_service_content = 
             "[Unit]\n\
              Description=Hyprland Wayland Desktop Live Session\n\
@@ -380,20 +397,10 @@ fn build_edition(edition: &Edition, workspace: &Path) -> Result<PathBuf, String>
              Type=simple\n\
              User=root\n\
              WorkingDirectory=/root\n\
-             Environment=XDG_SESSION_TYPE=wayland\n\
-             Environment=XDG_SESSION_DESKTOP=Hyprland\n\
-             Environment=XDG_CURRENT_DESKTOP=Hyprland\n\
-             Environment=XDG_RUNTIME_DIR=/run/user/0\n\
-             Environment=LIBSEAT_BACKEND=builtin\n\
-             Environment=WLR_NO_HARDWARE_CURSORS=1\n\
-             Environment=WLR_RENDERER_ALLOW_SOFTWARE=1\n\
-             Environment=LIBGL_ALWAYS_SOFTWARE=1\n\
-             Environment=GALLIUM_DRIVER=llvmpipe\n\
-             Environment=MESA_LOADER_DRIVER_OVERRIDE=llvmpipe\n\
              ExecStartPre=/usr/bin/mkdir -p /run/user/0\n\
              ExecStartPre=/usr/bin/chmod 0700 /run/user/0\n\
              ExecStartPre=/usr/bin/sleep 1\n\
-             ExecStart=/usr/bin/dbus-run-session /usr/bin/Hyprland --i-am-really-stupid\n\
+             ExecStart=/usr/bin/zsh -l\n\
              Restart=no\n\
              StandardInput=tty\n\
              StandardOutput=journal+console\n\
@@ -408,6 +415,7 @@ fn build_edition(edition: &Edition, workspace: &Path) -> Result<PathBuf, String>
              [Install]\n\
              WantedBy=multi-user.target\n\
             ";
+
         let service_path = edition_root.join("etc/systemd/system/hyprland.service");
         fs::write(&service_path, hyprland_service_content).ok();
         let multi_user_wants = edition_root.join("etc/systemd/system/multi-user.target.wants");
