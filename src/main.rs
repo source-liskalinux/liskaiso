@@ -205,14 +205,14 @@ fn install_package_pool(root: &Path, packages: &[&str]) -> Result<(), String> {
 
 const CLI_EDITION: Edition = Edition {
     id: "cli",
-    title: "Liska Linux CLI",
+    title: "Liska Linux X86_64",
     packages: &[
         "linux", "linux-headers", "linux-firmware", "lkpm", "lkchroot", "lkstrap",
         "systemd", "dbus", "glibc", "busybox", "zsh", "sudo", "efibootmgr",
         "networkmanager", "modemmanager", "usb_modeswitch", "inetutils", "bash",
         "nano", "vim", "grub", "libverto", "wget", "curl", "git", "which", "man-db",
         "man-pages", "mkinitcpio", "util-linux", "coreutils", "findutils", "sed", "grep",
-        "kmod", "virtualbox-guest-utils", "xf86-video-vmware", "xf86-video-vesa"
+        "kmod"
     ],
 };
 
