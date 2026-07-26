@@ -212,7 +212,8 @@ const CLI_EDITION: Edition = Edition {
         "networkmanager", "modemmanager", "usb_modeswitch", "inetutils", "bash",
         "nano", "vim", "grub", "libverto", "wget", "curl", "git", "which", "man-db",
         "man-pages", "lkinit", "util-linux", "coreutils", "findutils", "sed", "grep",
-        "kmod"
+        "kmod", "e2fsprogs", "iputils", "gptfdisk", "parted", "dosfstools", "btrfs-progs",
+        "xfsprogs",
     ],
 };
 
@@ -330,6 +331,11 @@ fn build_edition(edition: &Edition, workspace: &Path) -> Result<PathBuf, String>
         ";
     fs::write(getty_override_dir.join("override.conf"), autologin_conf)
         .map_err(|e| e.to_string())?;
+    print_info("Setting default systemd timezone to UTC....");
+    let localtime_path = edition_root.join("etc/localtime");
+    let _ = fs::remove_file(&localtime_path);
+    let _ = std::os::unix::fs::symlink("/usr/share/zoneinfo/UTC", &localtime_path);
+    let _ = fs::write(edition_root.join("etc/timezone"), "UTC\n");
     let os_release_src = PathBuf::from("src/os-release");
     fs::create_dir_all(edition_root.join("etc")).ok();
     if os_release_src.exists() {
