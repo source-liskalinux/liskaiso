@@ -338,7 +338,7 @@ fn build_edition(edition: &Edition, workspace: &Path) -> Result<PathBuf, String>
     let _ = fs::write(edition_root.join("etc/timezone"), "UTC\n");
     let mirrorlist_src = PathBuf::from("src/mirrorlist");
     fs::create_dir_all(edition_root.join("etc/lkpm.d")).ok();
-    fs::copy(&mirrorlist_src, edition_root.join("etc/lkpm.d/mirrorlist"));
+    let _ = fs::copy(&mirrorlist_src, edition_root.join("etc/lkpm.d/mirrorlist"));
     print_info("Copied lkpm mirrorlist configuration");
     let os_release_src = PathBuf::from("src/os-release");
     fs::create_dir_all(edition_root.join("etc")).ok();
