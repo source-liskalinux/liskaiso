@@ -320,6 +320,16 @@ fn build_edition(edition: &Edition, workspace: &Path) -> Result<PathBuf, String>
     if target_getty.exists() && !link_getty.exists() {
         let _ = std::os::unix::fs::symlink("../getty@.service", &link_getty);
     }
+    print_info("Configuring autologin for tty1....");
+    let getty_override_dir = edition_root.join("etc/systemd/system/getty@tty1.service.d");
+    fs::create_dir_all(&getty_override_dir).ok();
+    let autologin_conf = 
+        "[Service]\n\
+         ExecStart=\n\
+         ExecStart=-/sbin/agetty --autologin root --noclear %I $TERM\n\
+        ";
+    fs::write(getty_override_dir.join("override.conf"), autologin_conf)
+        .map_err(|e| e.to_string())?;
     let os_release_src = PathBuf::from("src/os-release");
     fs::create_dir_all(edition_root.join("etc")).ok();
     if os_release_src.exists() {
