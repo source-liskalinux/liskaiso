@@ -2,7 +2,7 @@
 # Liska Linux banner and terminal configuration
 
 # Format: [ username@hostname ] / # sudo foo
-PROMPT="%B%F{cyan}[ %n@%m ]%f %F{lightgreen}%~%f %F{white}#%f%b "
+PROMPT="%B%F{cyan}[ %n@%m ]%f %F{lightgreen}%~%f %F{white}➤%f%b "
 CYAN='\x1b[36m'; GREEN='\x1b[92m'; BOLD='\033[1m'; RESET='\x1b[0m'
 printf "──────────────────────────────────────────────────────────────────────────────\n\n"
 printf "${CYAN}${BOLD}::: [ LISKA LINUX LIVE ] :::${RESET}\n\n"
