@@ -1,0 +1,28 @@
+[# Mirrorlist usage
+# This file configures repository URLs and optional package rules for lkpm.
+#
+# - Sections: [core], [extra], [blocked]
+# - Use [blocked] to list package names to block. Trailing `*` is a prefix
+#   wildcard (for example, `arch*` matches `archiso`). Entries without `*`
+#   are matched exactly (for example, `archlinux` matches only that name).
+# - Be careful: a single `*` will match everything.
+# - To apply system-wide, edit `/etc/lkpm.d/mirrorlist`.
+# - Changes take effect the next time `lkpm` is run (no daemon restart).
+#]
+
+[core]
+# Liska Linux main repository, DO NOT delete it if you using Liska Linux
+https://repo-liskalinux.github.io/x86_64/core
+https://repo-liskalinux.github.io/x86_64/extra
+
+[extra]
+# 3rd party repository list, you can add any repository or your own repo here
+
+[blocked]
+# Exact package names to block
+# arch
+# archlinux
+# Prefix pattern example: block any package starting with 'arch' (e.g., archiso)
+# To enable prefix blocking, add a trailing '*' like `arch*` in your system mirrorlist.
+# arch*
+# archlinux*
