@@ -211,7 +211,7 @@ const CLI_EDITION: Edition = Edition {
         "systemd", "dbus", "glibc", "busybox", "zsh", "sudo", "efibootmgr",
         "networkmanager", "modemmanager", "usb_modeswitch", "inetutils", "bash",
         "nano", "vim", "grub", "libverto", "wget", "curl", "git", "which", "man-db",
-        "man-pages", "mkinitcpio", "util-linux", "coreutils", "findutils", "sed", "grep",
+        "man-pages", "lkinit", "util-linux", "coreutils", "findutils", "sed", "grep",
         "kmod"
     ],
 };
@@ -365,7 +365,7 @@ fn generate_pure_initramfs(rootfs: &Path, iso_root: &Path) -> Result<(), String>
         "--output", target_img.to_str().unwrap(),
         "--iso"
     ])?;
-    print_success("Liska Linux initramfs generated via lkinit successfully!");
+    print_success("Liska Linux initramfs generated successfully!");
     Ok(())
 }
 
