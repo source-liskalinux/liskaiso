@@ -14,9 +14,7 @@ const GREEN: &str = "\x1b[92m";
 const RED: &str = "\x1b[31m";
 const RESET: &str = "\x1b[0m";
 
-const EMBED_ZSHRC_CLI: &str = include_str!("./.zshrc-cli");
-const EMBED_ZSHRC_HYPRLAND: &str = include_str!("./.zshrc-hyprland");
-const EMBED_ZSHRC: &str = "export TERM=xterm-256color\nPROMPT='%F{cyan}[liskalinux %~]# %f'\n";
+const EMBED_ZSHRC: &str = include_str!("./zshrc");
 const EMBED_OS_RELEASE: &str = include_str!("./os-release");
 
 fn print_info(msg: &str) { println!("{}[i]{} {}", CYAN, RESET, msg); }
@@ -171,6 +169,7 @@ fn run_lkpm_smart_timeout(cmd: &str, args: &[&str]) -> Result<(), String> {
 
 fn install_package_pool(root: &Path, packages: &[&str]) -> Result<(), String> {
     let mut queue: Vec<String> = packages.iter().map(|s| s.to_string()).collect();
+    let _ = run_command("lkpm", &["-r"]);
     while let Some(pkg) = queue.pop() {
         if pkg.ends_with(".so") {
             print_info(&format!("Skipping invalid package format: {}", pkg));
@@ -216,45 +215,6 @@ const CLI_EDITION: Edition = Edition {
         "kmod", "virtualbox-guest-utils", "xf86-video-vmware", "xf86-video-vesa"
     ],
 };
-
-const HYPRLAND_EDITION: Edition = Edition {
-    id: "hyprland",
-    title: "Liska Linux Hyprland",
-    packages: &[
-        "linux", "linux-headers", "linux-firmware", "lkpm", "lkchroot", "lkstrap",
-        "systemd", "dbus", "glibc", "busybox", "zsh", "sudo", "efibootmgr",
-        "networkmanager", "modemmanager", "usb_modeswitch", "inetutils", "bash",
-        "nano", "vim", "grub", "libverto", "wget", "curl", "git", "which", "man-db",
-        "man-pages", "mkinitcpio", "util-linux", "coreutils", "findutils", "sed", "grep",
-        "kmod", "hyprland", "wayland", "wlroots", "mako", "waybar", "pipewire", 
-        "pipewire-pulse", "alacritty", "firefox", "xwayland", "hyprpaper", "rofi", "zenity", 
-        "polkit", "polkit-gnome", "calamares", "seatd", "mesa", "libdrm", "egl-wayland", "fastfetch",
-        "virtualbox-guest-utils", "xf86-video-vmware", "xf86-video-vesa"
-    ],
-};
-
-fn apply_dotfiles(edition_root: &Path) -> Result<(), String> {
-    print_info("Injecting dotfiles and calamares configs....");
-    let src_config = PathBuf::from("src/.config");
-    let skel_config = edition_root.join("etc/skel/.config");
-    let root_config = edition_root.join("root/.config");
-    if src_config.exists() {
-        fs::create_dir_all(&skel_config).ok();
-        fs::create_dir_all(&root_config).ok();
-        let _ = run_command("cp", &["-rf", src_config.join(".").to_str().unwrap(), skel_config.to_str().unwrap()]);
-        let _ = run_command("cp", &["-rf", src_config.join(".").to_str().unwrap(), root_config.to_str().unwrap()]);
-        let _ = run_command("chmod", &["-R", "+x", skel_config.join("hypr/scripts").to_str().unwrap()]);
-        let _ = run_command("chmod", &["-R", "+x", root_config.join("hypr/scripts").to_str().unwrap()]);
-    }
-    let src_calamares = PathBuf::from("src/etc/calamares");
-    let target_calamares = edition_root.join("etc/calamares");
-    if src_calamares.exists() {
-        fs::create_dir_all(&target_calamares).ok();
-        let _ = run_command("cp", &["-rf", src_calamares.join(".").to_str().unwrap(), target_calamares.to_str().unwrap()]);
-    }
-    print_info("Dotfiles and calamares configs injected successfully.");
-    Ok(())
-}
 
 fn build_edition(edition: &Edition, workspace: &Path) -> Result<PathBuf, String> {
     let edition_root = workspace.join(format!("airootfs-{}", edition.id));
@@ -302,8 +262,6 @@ fn build_edition(edition: &Edition, workspace: &Path) -> Result<PathBuf, String>
     ";
     fs::write(global_zsh_dir.join("zshrc"), custom_zshrc_content).map_err(|e| e.to_string())?;
     let candidates = [
-        format!("src/.zshrc-{}", edition.id),
-        format!("src/.zshrc_{}", edition.id),
         "src/.zshrc".to_string(),
     ];
     let root_zshrc = edition_root.join("root/.zshrc");
@@ -319,12 +277,7 @@ fn build_edition(edition: &Edition, workspace: &Path) -> Result<PathBuf, String>
         }
     }
     if !placed {
-        let content = match edition.id {
-            "cli" => EMBED_ZSHRC_CLI,
-            "hyprland" => EMBED_ZSHRC_HYPRLAND,
-            _ => EMBED_ZSHRC,
-        };
-        fs::write(&root_zshrc, content).map_err(|e| e.to_string())?;
+        fs::write(&root_zshrc, EMBED_ZSHRC).map_err(|e| e.to_string())?;
         print_info(&format!("Installed embedded .zshrc for {} to /root/.zshrc....", edition.id));
     }
     let passwd_path = edition_root.join("etc/passwd");
@@ -360,91 +313,20 @@ fn build_edition(edition: &Edition, workspace: &Path) -> Result<PathBuf, String>
         let _ = fs::write(&profile_path, auto_zsh_script);
     }
     print_info("Injected zsh to /etc/profile.");
-    if edition.id == "hyprland" {
-        print_info("Configuring autologin and welcome banner for Hyprland...");
-        let _ = Command::new("sh")
-            .args(&["-c", &format!("chroot {} passwd -d root", edition_root.display())])
-            .output();
-        let getty1_dir = edition_root.join("etc/systemd/system/getty@tty1.service.d");
-        fs::create_dir_all(&getty1_dir).ok();
-        let getty1_override = 
-            "[Service]\n\
-             ExecStart=\n\
-             ExecStart=-/usr/sbin/agetty --autologin root --noclear %I $TERM\n
-            ";
-        fs::write(getty1_dir.join("override.conf"), getty1_override).ok();
-        let helper_script = edition_root.join("usr/bin/start-hypr");
-        let helper_content = 
-            "#!/bin/sh\n\
-             export XDG_SESSION_TYPE=wayland\n\
-             export XDG_SESSION_DESKTOP=Hyprland\n\
-             export XDG_CURRENT_DESKTOP=Hyprland\n\
-             export XDG_RUNTIME_DIR=/run/user/0\n\
-             mkdir -p /run/user/0 && chmod 0700 /run/user/0\n\
-             export WLR_NO_HARDWARE_CURSORS=1\n\
-             export WLR_RENDERER_ALLOW_SOFTWARE=1\n\
-             export LIBGL_ALWAYS_SOFTWARE=1\n\
-             export GALLIUM_DRIVER=llvmpipe\n\
-             export MESA_LOADER_DRIVER_OVERRIDE=llvmpipe\n\
-             printf \"\\033[36m[i]\\033[0m Initializing Hyprland....\\n\"\n\
-             exec dbus-run-session Hyprland --i-am-really-stupid \"$@\"\n
-            ";
-        fs::write(&helper_script, helper_content).ok();
-        let _ = Command::new("chmod")
-            .args(&["+x", helper_script.to_str().unwrap()])
-            .output();
-        let zprofile_path = edition_root.join("root/.zprofile");
-        let zprofile_candidates = [
-            PathBuf::from("src/.zprofile-hyprland"),
-            PathBuf::from("src/.zprofile"),
-        ];
-        let mut zprofile_placed = false;
-        for candidate in &zprofile_candidates {
-            if candidate.exists() {
-                if let Ok(content) = fs::read_to_string(candidate) {
-                    let _ = fs::write(&zprofile_path, content);
-                    print_info(&format!("Integrated custom {} to /root/.zprofile....", candidate.display()));
-                    zprofile_placed = true;
-                    break;
-                }
-            }
-        }
-        if !zprofile_placed {
-            let default_zprofile = 
-                "if [ \"$(tty)\" = \"/dev/tty1\" ]; then\n\
-                     clear\n\
-                     printf \"─────────────────────────────────────────────────────────────────────────────────────────────\\n\\n\"\n\
-                     printf \"\\033[36m\\033[1m:::[ Liska Linux Hyprland ]:::\\033[0m\\n\\n\"\n\
-                     printf \"Welcome to Liska Linux Hyprland!\\n\"\n\
-                     printf \"Type \\033[92mstart-hypr\\033[0m to start the Graphical Desktop (GUI).\\n\"\n\
-                     printf \"Type \\033[92mhyprland\\033[0m as an alternative launcher.\\n\\n\"\n\
-                     printf \"For help, visit https://wiki.hyprland.org\\n\\n\"\n\
-                     printf \"─────────────────────────────────────────────────────────────────────────────────────────────\\n\\n\"\n\
-                 fi\n\
-                ";
-            let _ = fs::write(&zprofile_path, default_zprofile);
-            print_info("Installed default .zprofile for Hyprland to /root/.zprofile....");
-        }
-        apply_dotfiles(&edition_root)?;
-    } else if edition.id == "cli" {
-        let system_units_dir = edition_root.join("etc/systemd/system/getty.target.wants");
-        fs::create_dir_all(&system_units_dir).ok();
-        let target_getty = edition_root.join("lib/systemd/system/getty@.service");
-        let link_getty = system_units_dir.join("getty@tty1.service");
-        if target_getty.exists() && !link_getty.exists() {
-            let _ = std::os::unix::fs::symlink("../getty@.service", &link_getty);
-        }
+    let system_units_dir = edition_root.join("etc/systemd/system/getty.target.wants");
+    fs::create_dir_all(&system_units_dir).ok();
+    let target_getty = edition_root.join("lib/systemd/system/getty@.service");
+    let link_getty = system_units_dir.join("getty@tty1.service");
+    if target_getty.exists() && !link_getty.exists() {
+        let _ = std::os::unix::fs::symlink("../getty@.service", &link_getty);
     }
     let os_release_src = PathBuf::from("src/os-release");
     fs::create_dir_all(edition_root.join("etc")).ok();
     if os_release_src.exists() {
-        let os_release_content = fs::read_to_string(&os_release_src).map_err(|e| e.to_string())?;
-        let os_release_content = os_release_content.replace("{edition name}", edition.title);
-        fs::write(edition_root.join("etc/os-release"), os_release_content).map_err(|e| e.to_string())?;
-        print_info(&format!("Integrated os-release for {}.", edition.title));
+        fs::copy(&os_release_src, edition_root.join("etc/os-release")).map_err(|e| e.to_string())?;
+        print_info(&format!("Copied os-release for {} from src/os-release.", edition.title));
     } else {
-        let os_release_content = EMBED_OS_RELEASE.replace("{edition name}", edition.title);
-        fs::write(edition_root.join("etc/os-release"), os_release_content).map_err(|e| e.to_string())?;
+        fs::write(edition_root.join("etc/os-release"), EMBED_OS_RELEASE).map_err(|e| e.to_string())?;
         print_info(&format!("Installed embedded os-release for {}.", edition.title));
     }
     let kernel_src = edition_root.join("boot/vmlinuz-linux");
@@ -674,8 +556,6 @@ fn main() {
         println!("");
         println!("Usage: liskaiso <command>");
         println!("> --cli                    build CLI edition");
-        println!("> --hyprland               build Hyprland edition");
-        println!("> --all                    build all editions");
         println!("> --help                   display this help message");
         println!("");
         return;
@@ -686,24 +566,15 @@ fn main() {
     }
     let workspace = PathBuf::from("/home/janorovic/liskaiso-workspace");
     fs::create_dir_all(&workspace).ok();
-    let editions = if args.len() > 1 && args[1] == "--hyprland" {
-        vec![&HYPRLAND_EDITION]
-    } else if args.len() > 1 && args[1] == "--all" {
-        vec![&CLI_EDITION, &HYPRLAND_EDITION]
-    } else if args.len() > 1 && args[1] == "--cli" {
-        vec![&CLI_EDITION]
+    let edition = if args.len() > 1 && args[1] == "--cli" {
+        &CLI_EDITION
     } else {
         print_error("No valid edition specified. Use --help for usage.");
         exit(1);
     };
-    for edition in editions {
-        match build_edition(edition, &workspace) {
-            Ok(_) => {},
-            Err(e) => {
-                print_error(&format!("Failed to build {}: {}", edition.id, e));
-                exit(1);
-            }
-        }
+    if let Err(e) = build_edition(edition, &workspace) {
+        print_error(&format!("Failed to build {}: {}", edition.id, e));
+        exit(1);
     }
-    print_success("All editions has been built successfully!");
+    print_success("CLI edition has been built successfully!");
 }
