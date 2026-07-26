@@ -14,7 +14,7 @@ const GREEN: &str = "\x1b[92m";
 const RED: &str = "\x1b[31m";
 const RESET: &str = "\x1b[0m";
 
-const EMBED_ZSHRC: &str = include_str!("./zshrc");
+const EMBED_ZSHRC: &str = include_str!("./.zshrc");
 const EMBED_OS_RELEASE: &str = include_str!("./os-release");
 
 fn print_info(msg: &str) { println!("{}[i]{} {}", CYAN, RESET, msg); }
