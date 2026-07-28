@@ -370,6 +370,7 @@ fn build_edition(edition: &Edition, workspace: &Path) -> Result<PathBuf, String>
         "-comp", "zstd",
         "-noappend",
     ])?;
+    write_limine_conf(&path, None)
     let boot_dir = edition_iso_root.join("boot");
     let efi_boot_dir = edition_iso_root.join("EFI/BOOT");
     fs::create_dir_all(&boot_dir).ok();
@@ -395,6 +396,11 @@ fn build_edition(edition: &Edition, workspace: &Path) -> Result<PathBuf, String>
         "-no-emul-boot",
         "-boot-load-size", "4",
         "-boot-info-table",
+        "--eltorito-alt-boot",
+        "-e", "boot/limine-uefi-cd.bin",
+        "-no-emul-boot",
+        "-efi-boot-part",
+        "--efi-boot-image",
         "--eltorito-catalog", "boot/limine-eltorito.cat",
         edition_iso_root.to_str().unwrap(),
         "-o", iso_path.to_str().unwrap(),
