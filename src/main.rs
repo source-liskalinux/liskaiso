@@ -380,6 +380,8 @@ fn build_edition(edition: &Edition, workspace: &Path) -> Result<PathBuf, String>
         .map_err(|e| format!("Failed to copy limine-bios.sys: {}", e))?;
     fs::copy(limine_share.join("limine-bios-cd.bin"), boot_dir.join("limine-bios-cd.bin"))
         .map_err(|e| format!("Failed to copy limine-bios-cd.bin: {}", e))?;
+    fs::copy(limine_share.join("limine-uefi-cd.bin"), boot_dir.join("limine-uefi-cd.bin"))
+        .map_err(|e| format!("Failed to copy limine-uefi-cd.bin: {}", e))?;
     if limine_share.join("BOOTX64.EFI").exists() {
         let _ = fs::copy(limine_share.join("BOOTX64.EFI"), efi_boot_dir.join("BOOTX64.EFI"));
     }
