@@ -372,23 +372,25 @@ fn build_edition(edition: &Edition, workspace: &Path) -> Result<PathBuf, String>
     ])?;
     write_limine_conf(&edition_iso_root.join("limine.conf"), edition.title)?;
     let boot_dir = edition_iso_root.join("boot");
+    let efi_boot_dir = edition_iso_root.join("EFI/BOOT");
     fs::create_dir_all(&boot_dir).ok();
+    fs::create_dir_all(&efi_boot_dir).ok();
     let limine_share = Path::new("/usr/share/limine");
-    let _ = fs::copy(limine_share.join("limine-bios.sys"), boot_dir.join("limine-bios.sys"));
-    let _ = fs::copy(limine_share.join("limine-bios-cd.bin"), boot_dir.join("limine-bios-cd.bin"));
-    let _ = fs::copy(limine_share.join("BOOTX64.EFI"), boot_dir.join("BOOTX64.EFI"));
+    let _ = fs::copy(limine_share.join("limine-bios.sys"), edition_iso_root.join("limine-bios.sys"));
+    let _ = fs::copy(limine_share.join("limine-bios-cd.bin"), edition_iso_root.join("limine-bios-cd.bin"));
+    let _ = fs::copy(limine_share.join("BOOTX64.EFI"), efi_boot_dir.join("BOOTX64.EFI"));
     let iso_path = workspace.join(format!("liskalinux-{}-x86_64.iso", edition.id));
-    print_info(&format!("Building ISO: {}", iso_path.display()));
+    print_info(&format!("Building ISO with Limine: {}", iso_path.display()));
     run_command("xorriso", &[
         "-as", "mkisofs",
-        "-b", "boot/limine-bios-cd.bin",
+        "-b", "limine-bios-cd.bin",
         "-no-emul-boot",
         "-boot-load-size", "4",
         "-boot-info-table",
-        "--eltorito-alt-boot",
-        "-e", "boot/BOOTX64.EFI",
-        "-no-emul-boot",
-        "-isohybrid-gpt-basdat",
+        "--efi-boot", "limine-bios-cd.bin",
+        "-efi-boot-part",
+        "--efi-boot-image",
+        "--protective-msdos-label",
         edition_iso_root.to_str().unwrap(),
         "-o", iso_path.to_str().unwrap(),
     ])?;
