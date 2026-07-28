@@ -370,12 +370,13 @@ fn build_edition(edition: &Edition, workspace: &Path) -> Result<PathBuf, String>
         "-comp", "zstd",
         "-noappend",
     ])?;
-    write_limine_conf(&edition_iso_root.join("limine.conf"), edition.title)?;
     let boot_dir = edition_iso_root.join("boot");
     let efi_boot_dir = edition_iso_root.join("EFI/BOOT");
     fs::create_dir_all(&boot_dir).ok();
     fs::create_dir_all(&efi_boot_dir).ok();
-    let limine_share = Path::new("usr/share/limine");
+    let limine_conf = edition_root.join("boot/limine.conf");
+    fs::copy(&limine_conf, edition_iso_root.join("boot/limine.conf")).map_err(|e| e.to_string())?;
+    let limine_share = edition_root.join("usr/share/limine");
     fs::copy(limine_share.join("limine-bios.sys"), boot_dir.join("limine-bios.sys"))
         .map_err(|e| format!("Failed to copy limine-bios.sys: {}", e))?;
     fs::copy(limine_share.join("limine-bios-cd.bin"), boot_dir.join("limine-bios-cd.bin"))
@@ -415,25 +416,6 @@ fn generate_pure_initramfs(rootfs: &Path, iso_root: &Path) -> Result<(), String>
     ])?;
     print_success("Liska Linux initramfs generated successfully!");
     Ok(())
-}
-
-fn write_limine_conf(path: &Path, title: &str) -> Result<(), String> {
-    if let Some(parent) = path.parent() {
-        fs::create_dir_all(parent).ok();
-    }
-    let content = format!(
-        "TIMEOUT=5\n\
-         VERBOSE=yes\n\
-         \n\
-         /{} {{\n\
-             PROTOCOL=linux\n\
-             KERNEL_PATH=boot:///boot/vmlinuz-linux\n\
-             MODULE_PATH=boot:///boot/initramfs-liska.img\n\
-             CMDLINE=rw console=tty1 loglevel=3 audit=0 systemd.show_status=1 quiet cow_spacesize=2G\n\
-         }}\n",
-        title
-    );
-    fs::write(path, content).map_err(|e| e.to_string())
 }
 
 fn main() {
