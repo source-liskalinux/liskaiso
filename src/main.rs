@@ -210,7 +210,7 @@ const CLI_EDITION: Edition = Edition {
         "linux", "linux-headers", "linux-firmware", "lkpm", "lkchroot", "lkstrap",
         "systemd", "dbus", "glibc", "busybox", "zsh", "sudo", "efibootmgr",
         "networkmanager", "modemmanager", "usb_modeswitch", "inetutils", "bash",
-        "nano", "vim", "grub", "libverto", "wget", "curl", "git", "which", "man-db",
+        "nano", "vim", "limine", "libverto", "wget", "curl", "git", "which", "man-db",
         "man-pages", "lkinit", "util-linux", "coreutils", "findutils", "sed", "grep",
         "kmod", "e2fsprogs", "iputils", "gptfdisk", "parted", "dosfstools", "btrfs-progs",
         "xfsprogs", "ca-certificates", "libnghttp3", "libnghttp2", "libpsl", "libidn2", 
