@@ -213,7 +213,7 @@ const CLI_EDITION: Edition = Edition {
         "nano", "vim", "grub", "libverto", "wget", "curl", "git", "which", "man-db",
         "man-pages", "lkinit", "util-linux", "coreutils", "findutils", "sed", "grep",
         "kmod", "e2fsprogs", "iputils", "gptfdisk", "parted", "dosfstools", "btrfs-progs",
-        "xfsprogs",
+        "xfsprogs", "ca-certificates",
     ],
 };
 
