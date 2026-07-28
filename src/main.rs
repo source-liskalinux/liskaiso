@@ -433,12 +433,11 @@ fn write_limine_conf(path: &Path) -> Result<(), String> {
          ansicolor: 73a5c6, ffffff, 73a5c6, d0e1f9, 73a5c6, ffffff, d0e1f9, ffffff\n\
          backdrop: 1a365d\n\
          \n\
-         /Liska Linux x86_64 {\n\
+         /Liska Linux x86_64\n\
              protocol: linux\n\
-             kernel_path: boot():/vmlinuz-linux\n\
-             module_path: boot():/initramfs-liska.img\n\
+             kernel_path: /boot/vmlinuz-linux\n\
+             module_path: /boot/initramfs-liska.img\n\
              cmdline: rw console=tty1 loglevel=3 audit=0 systemd.show_status=1 quiet cow_spacesize=2G\n\
-         }\n
         ";
     fs::write(path, content).map_err(|e| e.to_string())
 }
