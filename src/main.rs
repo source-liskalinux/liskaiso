@@ -370,7 +370,7 @@ fn build_edition(edition: &Edition, workspace: &Path) -> Result<PathBuf, String>
         "-comp", "zstd",
         "-noappend",
     ])?;
-    write_limine_conf(&path, None);
+    write_limine_conf(&edition_iso_root.join("limine.conf"))?;
     let boot_dir = edition_iso_root.join("boot");
     let efi_boot_dir = edition_iso_root.join("EFI/BOOT");
     fs::create_dir_all(&boot_dir).ok();
