@@ -370,10 +370,29 @@ fn build_edition(edition: &Edition, workspace: &Path) -> Result<PathBuf, String>
         "-comp", "zstd",
         "-noappend",
     ])?;
-    write_grub_cfg(&edition_iso_root.join("boot/grub/grub.cfg"), edition.title)?;
+    write_limine_conf(&edition_iso_root.join("limine.conf"), edition.title)?;
+    let boot_dir = edition_iso_root.join("boot");
+    fs::create_dir_all(&boot_dir).ok();
+    let limine_share = Path::new("/usr/share/limine");
+    let _ = fs::copy(limine_share.join("limine-bios.sys"), boot_dir.join("limine-bios.sys"));
+    let _ = fs::copy(limine_share.join("limine-bios-cd.bin"), boot_dir.join("limine-bios-cd.bin"));
+    let _ = fs::copy(limine_share.join("BOOTX64.EFI"), boot_dir.join("BOOTX64.EFI"));
     let iso_path = workspace.join(format!("liskalinux-{}-x86_64.iso", edition.id));
     print_info(&format!("Building ISO: {}", iso_path.display()));
-    run_command("grub-mkrescue", &["-o", iso_path.to_str().unwrap(), edition_iso_root.to_str().unwrap()])?;
+    run_command("xorriso", &[
+        "-as", "mkisofs",
+        "-b", "boot/limine-bios-cd.bin",
+        "-no-emul-boot",
+        "-boot-load-size", "4",
+        "-boot-info-table",
+        "--eltorito-alt-boot",
+        "-e", "boot/BOOTX64.EFI",
+        "-no-emul-boot",
+        "-isohybrid-gpt-basdat",
+        edition_iso_root.to_str().unwrap(),
+        "-o", iso_path.to_str().unwrap(),
+    ])?;
+    run_command("limine", &["bios-install", iso_path.to_str().unwrap()])?;
     print_success(&format!("Successfully built {} at {}.", edition.title, iso_path.display()));
     Ok(iso_path)
 }
@@ -390,17 +409,20 @@ fn generate_pure_initramfs(rootfs: &Path, iso_root: &Path) -> Result<(), String>
     Ok(())
 }
 
-fn write_grub_cfg(path: &Path, title: &str) -> Result<(), String> {
+fn write_limine_conf(path: &Path, title: &str) -> Result<(), String> {
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent).ok();
     }
-    let content = format!("
-        set timeout=5\n\
-        set default=0\n\
-        menuentry \"{}\" {{\n\
-            linux /boot/vmlinuz-linux rw console=tty1 loglevel=3 audit=0 systemd.show_status=1 quiet cow_spacesize=2G\n\
-            initrd /boot/initramfs-liska.img\n\
-        }}\n",
+    let content = format!(
+        "TIMEOUT=5\n\
+         VERBOSE=yes\n\
+         \n\
+         /{} {{\n\
+             PROTOCOL=linux\n\
+             KERNEL_PATH=boot:///boot/vmlinuz-linux\n\
+             MODULE_PATH=boot:///boot/initramfs-liska.img\n\
+             CMDLINE=rw console=tty1 loglevel=3 audit=0 systemd.show_status=1 quiet cow_spacesize=2G\n\
+         }}\n",
         title
     );
     fs::write(path, content).map_err(|e| e.to_string())
