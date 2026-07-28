@@ -374,8 +374,6 @@ fn build_edition(edition: &Edition, workspace: &Path) -> Result<PathBuf, String>
     let efi_boot_dir = edition_iso_root.join("EFI/BOOT");
     fs::create_dir_all(&boot_dir).ok();
     fs::create_dir_all(&efi_boot_dir).ok();
-    let limine_conf = edition_root.join("boot/limine.conf");
-    fs::copy(&limine_conf, edition_iso_root.join("boot/limine.conf")).map_err(|e| e.to_string())?;
     let limine_share = edition_root.join("usr/share/limine");
     fs::copy(limine_share.join("limine-bios.sys"), boot_dir.join("limine-bios.sys"))
         .map_err(|e| format!("Failed to copy limine-bios.sys: {}", e))?;
@@ -416,6 +414,27 @@ fn generate_pure_initramfs(rootfs: &Path, iso_root: &Path) -> Result<(), String>
     ])?;
     print_success("Liska Linux initramfs generated successfully!");
     Ok(())
+}
+
+fn write_limine_conf(path: &Path) -> Result<(), String> {
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent).ok();
+    }
+    let content = 
+        "timeout: 5\n\
+         verbose: yes\n\
+         interface_branding: Liska Linux ISO\n\
+         ansicolor: 73a5c6, ffffff, 73a5c6, d0e1f9, 73a5c6, ffffff, d0e1f9, ffffff\n\
+         backdrop: 1a365d\n\
+         \n\
+         /Liska Linux x86_64 {\n\
+             protocol: linux\n\
+             kernel_path: boot():/vmlinuz-linux\n\
+             module_path: boot():/initramfs-liska.img\n\
+             cmdline: rw console=tty1 loglevel=3 audit=0 systemd.show_status=1 quiet cow_spacesize=2G\n\
+         }\n
+        ";
+    fs::write(path, content).map_err(|e| e.to_string())
 }
 
 fn main() {
