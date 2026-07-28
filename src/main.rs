@@ -375,7 +375,7 @@ fn build_edition(edition: &Edition, workspace: &Path) -> Result<PathBuf, String>
     let efi_boot_dir = edition_iso_root.join("EFI/BOOT");
     fs::create_dir_all(&boot_dir).ok();
     fs::create_dir_all(&efi_boot_dir).ok();
-    let limine_share = Path::new("/usr/share/limine");
+    let limine_share = Path::new("usr/share/limine");
     fs::copy(limine_share.join("limine-bios.sys"), boot_dir.join("limine-bios.sys"))
         .map_err(|e| format!("Failed to copy limine-bios.sys: {}", e))?;
     fs::copy(limine_share.join("limine-bios-cd.bin"), boot_dir.join("limine-bios-cd.bin"))
@@ -394,7 +394,7 @@ fn build_edition(edition: &Edition, workspace: &Path) -> Result<PathBuf, String>
         "-no-emul-boot",
         "-boot-load-size", "4",
         "-boot-info-table",
-        "--eeltorito-catalog", "boot/limine-eltorito.cat",
+        "--eltorito-catalog", "boot/limine-eltorito.cat",
         edition_iso_root.to_str().unwrap(),
         "-o", iso_path.to_str().unwrap(),
     ])?;
