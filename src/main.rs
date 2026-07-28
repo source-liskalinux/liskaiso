@@ -435,8 +435,8 @@ fn write_limine_conf(path: &Path) -> Result<(), String> {
          \n\
          /Liska Linux x86_64\n\
              protocol: linux\n\
-             kernel_path: /boot/vmlinuz-linux\n\
-             module_path: /boot/initramfs-liska.img\n\
+             kernel_path: boot():/boot/vmlinuz-linux\n\
+             module_path: boot():/boot/initramfs-liska.img\n\
              cmdline: rw console=tty1 loglevel=3 audit=0 systemd.show_status=1 quiet cow_spacesize=2G\n\
         ";
     fs::write(path, content).map_err(|e| e.to_string())
