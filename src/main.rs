@@ -376,21 +376,25 @@ fn build_edition(edition: &Edition, workspace: &Path) -> Result<PathBuf, String>
     fs::create_dir_all(&boot_dir).ok();
     fs::create_dir_all(&efi_boot_dir).ok();
     let limine_share = Path::new("/usr/share/limine");
-    let _ = fs::copy(limine_share.join("limine-bios.sys"), edition_iso_root.join("limine-bios.sys"));
-    let _ = fs::copy(limine_share.join("limine-bios-cd.bin"), edition_iso_root.join("limine-bios-cd.bin"));
-    let _ = fs::copy(limine_share.join("BOOTX64.EFI"), efi_boot_dir.join("BOOTX64.EFI"));
+    fs::copy(limine_share.join("limine-bios.sys"), boot_dir.join("limine-bios.sys"))
+        .map_err(|e| format!("Failed to copy limine-bios.sys: {}", e))?;
+    fs::copy(limine_share.join("limine-bios-cd.bin"), boot_dir.join("limine-bios-cd.bin"))
+        .map_err(|e| format!("Failed to copy limine-bios-cd.bin: {}", e))?;
+    if limine_share.join("BOOTX64.EFI").exists() {
+        let _ = fs::copy(limine_share.join("BOOTX64.EFI"), efi_boot_dir.join("BOOTX64.EFI"));
+    }
+    if limine_share.join("BOOTIA32.EFI").exists() {
+        let _ = fs::copy(limine_share.join("BOOTIA32.EFI"), efi_boot_dir.join("BOOTIA32.EFI"));
+    }
     let iso_path = workspace.join(format!("liskalinux-{}-x86_64.iso", edition.id));
     print_info(&format!("Building ISO with Limine: {}", iso_path.display()));
     run_command("xorriso", &[
         "-as", "mkisofs",
-        "-b", "limine-bios-cd.bin",
+        "-b", "boot/limine-bios-cd.bin",
         "-no-emul-boot",
         "-boot-load-size", "4",
         "-boot-info-table",
-        "--efi-boot", "limine-bios-cd.bin",
-        "-efi-boot-part",
-        "--efi-boot-image",
-        "--protective-msdos-label",
+        "--eeltorito-catalog", "boot/limine-eltorito.cat",
         edition_iso_root.to_str().unwrap(),
         "-o", iso_path.to_str().unwrap(),
     ])?;
