@@ -214,7 +214,7 @@ const CLI_EDITION: Edition = Edition {
         "man-pages", "lkinit", "util-linux", "coreutils", "findutils", "sed", "grep",
         "kmod", "e2fsprogs", "iputils", "gptfdisk", "parted", "dosfstools", "btrfs-progs",
         "xfsprogs", "ca-certificates", "libnghttp3", "libnghttp2", "libpsl", "libidn2", 
-        "brotli",
+        "brotli", "memtest86+"
     ],
 };
 
@@ -231,7 +231,7 @@ fn build_edition(edition: &Edition, workspace: &Path) -> Result<PathBuf, String>
     let usr_sbin_dir = edition_root.join("usr/sbin");
     fs::create_dir_all(&sbin_dir).ok();
     fs::create_dir_all(&usr_sbin_dir).ok();
-    let systemctl_target = "/usr/bin/systemctl";
+    let systemctl_target = "usr/bin/systemctl";
     for cmd in &["reboot", "shutdown", "poweroff", "halt"] {
         let sbin_link = sbin_dir.join(cmd);
         let usr_sbin_link = usr_sbin_dir.join(cmd);
@@ -390,24 +390,29 @@ fn generate_pure_initramfs(rootfs: &Path, iso_root: &Path) -> Result<(), String>
     Ok(())
 }
 
-fn write_grub_cfg(path: &Path, title: &str) -> Result<(), String> {
+fn write_grub_cfg(path: &Path) -> Result<(), String> {
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent).ok();
     }
-    let content = format!("
-        set timeout=5\n\
-        set default=0\n\
-        menuentry \"Liska Linux X86_64\" {{\n\
-            linux /boot/vmlinuz-linux rw console=tty1 loglevel=3 audit=0 systemd.show_status=1 quiet cow_spacesize=2G\n\
-            initrd /boot/initramfs-liska.img\n\
-        }}\n\
-        menuentry \"MemTest86\" {{\n\
-            insmod part_gpt\n\
-            insmod fat\n\
-            set root='hd0,gpt1'\n\
-            chainloader /EFI/memtest/memtest86.efi\n\
-        }}\n"
-    );
+    let content = 
+      "set timeout=5\n\
+       set default=0\n\
+       \n\
+       menuentry \"Liska Linux x86_64\" {{\n\
+           linux /boot/vmlinuz-linux rw console=tty1 loglevel=3 audit=0 systemd.show_status=1 quiet cow_spacesize=2G\n\
+           initrd /boot/initramfs-liska.img\n\
+       }}\n\
+       \n\
+       menuentry \"Memory Test 86 Utility\" {{\n\
+           insmod part_gpt\n\
+           insmod fat\n\
+           set root='hd0,gpt1'\n\
+           chainloader /EFI/memtest/memtest86.efi\n\
+       }}\n\
+       \n\
+       menuentry \"UEFI Firmware Settings\" --class efi {{\n\
+           fwsetup\n\
+       }}\n";
     fs::write(path, content).map_err(|e| e.to_string())
 }
 
@@ -429,7 +434,7 @@ fn main() {
         print_error("Must be executed with root privileges.");
         exit(1);
     }
-    let workspace = PathBuf::from("/home/janorovic/liskaiso-workspace");
+    let workspace = PathBuf::from("./liskaiso-workspace");
     fs::create_dir_all(&workspace).ok();
     let edition = if args.len() > 1 && args[1] == "--cli" {
         &CLI_EDITION
