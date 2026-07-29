@@ -370,7 +370,7 @@ fn build_edition(edition: &Edition, workspace: &Path) -> Result<PathBuf, String>
         "-comp", "zstd",
         "-noappend",
     ])?;
-    write_grub_cfg(&edition_iso_root.join("boot/grub/grub.cfg"), edition.title)?;
+    write_grub_cfg(&edition_iso_root.join("boot/grub/grub.cfg"))?;
     let iso_path = workspace.join(format!("liskalinux-{}-x86_64.iso", edition.id));
     print_info(&format!("Building ISO: {}", iso_path.display()));
     run_command("grub-mkrescue", &["-o", iso_path.to_str().unwrap(), edition_iso_root.to_str().unwrap()])?;
