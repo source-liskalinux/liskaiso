@@ -210,7 +210,7 @@ const CLI_EDITION: Edition = Edition {
         "linux", "linux-headers", "linux-firmware", "lkpm", "lkchroot", "lkstrap",
         "systemd", "dbus", "glibc", "busybox", "zsh", "sudo", "efibootmgr",
         "networkmanager", "modemmanager", "usb_modeswitch", "inetutils", "bash",
-        "nano", "vim", "limine", "libverto", "wget", "curl", "git", "which", "man-db",
+        "nano", "vim", "grub", "libverto", "wget", "curl", "git", "which", "man-db",
         "man-pages", "lkinit", "util-linux", "coreutils", "findutils", "sed", "grep",
         "kmod", "e2fsprogs", "iputils", "gptfdisk", "parted", "dosfstools", "btrfs-progs",
         "xfsprogs", "ca-certificates", "libnghttp3", "libnghttp2", "libpsl", "libidn2", 
@@ -370,42 +370,10 @@ fn build_edition(edition: &Edition, workspace: &Path) -> Result<PathBuf, String>
         "-comp", "zstd",
         "-noappend",
     ])?;
-    write_limine_conf(&edition_iso_root.join("limine.conf"))?;
-    let boot_dir = edition_iso_root.join("boot");
-    let efi_boot_dir = edition_iso_root.join("EFI/BOOT");
-    fs::create_dir_all(&boot_dir).ok();
-    fs::create_dir_all(&efi_boot_dir).ok();
-    let limine_share = edition_root.join("usr/share/limine");
-    fs::copy(limine_share.join("limine-bios.sys"), boot_dir.join("limine-bios.sys"))
-        .map_err(|e| format!("Failed to copy limine-bios.sys: {}", e))?;
-    fs::copy(limine_share.join("limine-bios-cd.bin"), boot_dir.join("limine-bios-cd.bin"))
-        .map_err(|e| format!("Failed to copy limine-bios-cd.bin: {}", e))?;
-    fs::copy(limine_share.join("limine-uefi-cd.bin"), boot_dir.join("limine-uefi-cd.bin"))
-        .map_err(|e| format!("Failed to copy limine-uefi-cd.bin: {}", e))?;
-    if limine_share.join("BOOTX64.EFI").exists() {
-        let _ = fs::copy(limine_share.join("BOOTX64.EFI"), efi_boot_dir.join("BOOTX64.EFI"));
-    }
-    if limine_share.join("BOOTIA32.EFI").exists() {
-        let _ = fs::copy(limine_share.join("BOOTIA32.EFI"), efi_boot_dir.join("BOOTIA32.EFI"));
-    }
+    write_grub_cfg(&edition_iso_root.join("boot/grub/grub.cfg"), edition.title)?;
     let iso_path = workspace.join(format!("liskalinux-{}-x86_64.iso", edition.id));
-    print_info(&format!("Building ISO with Limine: {}", iso_path.display()));
-    run_command("xorriso", &[
-        "-as", "mkisofs",
-        "-b", "boot/limine-bios-cd.bin",
-        "-no-emul-boot",
-        "-boot-load-size", "4",
-        "-boot-info-table",
-        "--eltorito-alt-boot",
-        "-e", "boot/limine-uefi-cd.bin",
-        "-no-emul-boot",
-        "-efi-boot-part",
-        "--efi-boot-image",
-        "--eltorito-catalog", "boot/limine-eltorito.cat",
-        edition_iso_root.to_str().unwrap(),
-        "-o", iso_path.to_str().unwrap(),
-    ])?;
-    run_command("limine", &["bios-install", iso_path.to_str().unwrap()])?;
+    print_info(&format!("Building ISO: {}", iso_path.display()));
+    run_command("grub-mkrescue", &["-o", iso_path.to_str().unwrap(), edition_iso_root.to_str().unwrap()])?;
     print_success(&format!("Successfully built {} at {}.", edition.title, iso_path.display()));
     Ok(iso_path)
 }
@@ -422,23 +390,24 @@ fn generate_pure_initramfs(rootfs: &Path, iso_root: &Path) -> Result<(), String>
     Ok(())
 }
 
-fn write_limine_conf(path: &Path) -> Result<(), String> {
+fn write_grub_cfg(path: &Path, title: &str) -> Result<(), String> {
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent).ok();
     }
-    let content = 
-        "timeout: 5\n\
-         verbose: yes\n\
-         interface_branding: Liska Linux ISO\n\
-         ansicolor: 73a5c6, ffffff, 73a5c6, d0e1f9, 73a5c6, ffffff, d0e1f9, ffffff\n\
-         backdrop: 1a365d\n\
-         \n\
-         /Liska Linux x86_64\n\
-             protocol: linux\n\
-             kernel_path: boot():/boot/vmlinuz-linux\n\
-             module_path: boot():/boot/initramfs-liska.img\n\
-             cmdline: rw console=tty1 loglevel=3 audit=0 systemd.show_status=1 quiet cow_spacesize=2G\n\
-        ";
+    let content = format!("
+        set timeout=5\n\
+        set default=0\n\
+        menuentry \"Liska Linux X86_64\" {{\n\
+            linux /boot/vmlinuz-linux rw console=tty1 loglevel=3 audit=0 systemd.show_status=1 quiet cow_spacesize=2G\n\
+            initrd /boot/initramfs-liska.img\n\
+        }}\n\
+        menuentry \"MemTest86\" {{\n\
+            insmod part_gpt\n\
+            insmod fat\n\
+            set root='hd0,gpt1'\n\
+            chainloader /EFI/memtest/memtest86.efi\n\
+        }}\n"
+    );
     fs::write(path, content).map_err(|e| e.to_string())
 }
 
