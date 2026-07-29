@@ -355,6 +355,8 @@ fn build_edition(edition: &Edition, workspace: &Path) -> Result<PathBuf, String>
         return Err("FATAL: vmlinuz-linux not found in rootfs!".into());
     }
     fs::copy(&kernel_src, edition_iso_root.join("boot/vmlinuz-linux")).map_err(|e| e.to_string())?;
+    let memtest86_src = edition_root.join("boot/memtest86+/memtest.bin");
+    fs::copy(&memtest86_src, edition_iso_root.join("boot/memtest86+/memtest.bin")).map_err(|e| e.to_string())?;
     let sysctl_dir = edition_root.join("etc/sysctl.d");
     fs::create_dir_all(&sysctl_dir).ok();
     let _ = fs::write(
