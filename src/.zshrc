@@ -4,10 +4,10 @@
 # Format: [ username@hostname ] / # sudo foo
 update-ca-trust
 PROMPT="%B%F{cyan}[ %n@%m ]%f %F{lightgreen}%~%f %F{white}>%f%b "
-CYAN='\x1b[36m'; GREEN='\x1b[92m'; BOLD='\033[1m'; RESET='\x1b[0m'
-printf "----------------------------\n"
+CYAN='\033[36m'; GREEN='\033[92m'; BOLD='\033[1m'; RESET='\033[0m'
+printf "${BOLD}----------------------------${RESET}\n"
 printf "${CYAN}${BOLD}::: [ LISKA LINUX LIVE ] :::${RESET}\n"
-printf "----------------------------\n\n"
+printf "${BOLD}----------------------------${RESET}\n\n"
 printf "Welcome to ${CYAN}${BOLD}Liska Linux${RESET} live iso!\n"
 printf "Installation guide page:\n"
 printf "${GREEN}${BOLD}https://liskalinuxwiki.web.app/installation-guide/${RESET}\n\n"
