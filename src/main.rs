@@ -24,7 +24,7 @@ const PACKAGES: &[&str] = &[
     "man-pages", "lkinit", "util-linux", "coreutils", "findutils", "sed", "grep",
     "kmod", "e2fsprogs", "iputils", "gptfdisk", "parted", "dosfstools", "btrfs-progs",
     "xfsprogs", "ca-certificates", "libnghttp3", "libnghttp2", "libpsl", "libidn2",
-    "brotli", "memtest86+",
+    "brotli", "memtest86+", "memtest86+-efi"
 ];
 
 fn print_info(msg: &str) { println!("{}[i]{} {}", CYAN, RESET, msg); }
@@ -342,11 +342,17 @@ fn build_iso(workspace: &Path) -> Result<PathBuf, String> {
         return Err("FATAL: vmlinuz-linux not found in rootfs!".into());
     }
     fs::copy(&kernel_src, iso_root.join("boot/vmlinuz-linux")).map_err(|e| e.to_string())?;
-    let memtest86_src = root.join("boot/memtest86+/memtest.bin");
-    if memtest86_src.exists() {
-        let memtest_dst_dir = iso_root.join("boot/memtest86+");
-        fs::create_dir_all(&memtest_dst_dir).ok();
-        let _ = fs::copy(&memtest86_src, memtest_dst_dir.join("memtest.bin"));
+    let memtest86_bin = root.join("boot/memtest86+/memtest.bin");
+    if memtest86_bin.exists() {
+        let bios_dst = iso_root.join("boot/memtest86+");
+        fs::create_dir_all(&bios_dst).ok();
+        let _ = fs::copy(&memtest86_bin, bios_dst.join("memtest.bin"));
+    }
+    let memtest86_efi = root.join("boot/memtest86+/memtest.efi");
+    if memtest86_efi.exists() {
+        let efi_dst = iso_root.join("EFI/memtest");
+        fs::create_dir_all(&efi_dst).ok();
+        let _ = fs::copy(&memtest86_efi, efi_dst.join("memtest86.efi"));
     }
     let sysctl_dir = root.join("etc/sysctl.d");
     fs::create_dir_all(&sysctl_dir).ok();
@@ -387,24 +393,35 @@ fn write_grub_cfg(path: &Path) -> Result<(), String> {
         fs::create_dir_all(parent).ok();
     }
     let content = 
-        "set timeout=5\n\
+        "insmod iso9660\n\
+         insmod part_msdos\n\
+         insmod part_gpt\n\
+         insmod fat\n\
+         set timeout=5\n\
          set default=0\n\
+         search --no-floppy --file --set=root /boot/vmlinuz-linux\n\
          \n\
          menuentry \"Liska Linux x86_64\" {\n\
              linux /boot/vmlinuz-linux rw console=tty1 loglevel=3 audit=0 systemd.show_status=1 quiet cow_spacesize=2G\n\
              initrd /boot/initramfs-liska.img\n\
          }\n\
          \n\
-         menuentry \"Memtest86 Utility\" {\n\
-             insmod part_gpt\n\
-             insmod fat\n\
-             set root='hd0,gpt1'\n\
-             chainloader /EFI/memtest/memtest86.efi\n\
-         }\n\
-         \n\
-         menuentry \"UEFI Firmware Settings\" --class efi {\n\
-             fwsetup\n\
-         }\n\
+         if [ \"${grub_platform}\" = \"pc\" ]; then\n\
+             menuentry \"BIOS Memtest86+ Utility\" {\n\
+                 search --no-floppy --file --set=root /boot/memtest86+/memtest.bin\n\
+                 linux16 /boot/memtest86+/memtest.bin\n\
+             }\n\
+         fi\n\
+         if [ \"${grub_platform}\" = \"efi\" ]; then\n\
+             menuentry \"UEFI Memtest86+ Utility\" {\n\
+                 search --no-floppy --file --set=root /EFI/memtest/memtest86.efi\n\
+                 chainloader /EFI/memtest/memtest86.efi\n\
+             }\n\
+             \n\
+             menuentry \"UEFI Firmware Settings\" --class efi {\n\
+                 fwsetup\n\
+             }\n\
+         fi\n\
          ";
     fs::write(path, content).map_err(|e| e.to_string())
 }
