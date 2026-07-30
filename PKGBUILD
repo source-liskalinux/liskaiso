@@ -9,7 +9,7 @@ pkgrel=1
 pkgdesc="Liska ISO Builder"
 arch=('x86_64')
 license=('General Public License v3 or Later')
-depends=('busybox' 'cpio')
+depends=('lkinit' 'lkpm' 'grub' 'libisoburn' 'mtools' 'dosfstools')
 package() {
     install -d "${pkgdir}/usr/bin"
     install -Dm755 "${srcdir}/../target/debug/liskaiso" "${pkgdir}/usr/bin/liskaiso"
