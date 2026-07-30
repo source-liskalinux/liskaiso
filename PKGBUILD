@@ -11,6 +11,7 @@ arch=('x86_64')
 license=('General Public License v3 or Later')
 depends=('lkinit' 'lkpm' 'grub' 'libisoburn' 'mtools' 'dosfstools')
 package() {
+    cargo build
     install -d "${pkgdir}/usr/bin"
     install -Dm755 "${srcdir}/../target/debug/liskaiso" "${pkgdir}/usr/bin/liskaiso"
     install -Dm755 "${srcdir}/../src/liskaiso-workspace/packages" "${pkgdir}/home/liskaiso-workspace/packages"
