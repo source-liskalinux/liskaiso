@@ -31,6 +31,30 @@ fn print_info(msg: &str) { println!("{}[i]{} {}", CYAN, RESET, msg); }
 fn print_success(msg: &str) { println!("{}[+]{} {}{}{}", CYAN, RESET, GREEN, msg, RESET); }
 fn print_error(msg: &str) { println!("{}[-]{} {}{}{}", CYAN, RESET, RED, msg, RESET); }
 
+fn check_host_dependencies() -> Result<(), String> {
+    print_info("Checking dependencies for ISO generation....");
+    let required_tools = ["grub-mkrescue", "xorriso", "mformat", "mkfs.fat"];
+    for tool in &required_tools {
+        let check = Command::new("which").arg(tool).output();
+        match check {
+            Ok(out) if out.status.success() => {},
+            _ => return Err(format!("'{}' missing! Please install {} on your system to run liskaiso.", tool, tool)),
+        }
+    }
+    let efi_dir1 = Path::new("/usr/lib/grub/x86_64-efi");
+    let efi_dir2 = Path::new("/usr/share/grub/x86_64-efi");
+    if !efi_dir1.exists() && !efi_dir2.exists() {
+        return Err("GRUB x86_64-efi modules missing! Please install GRUB UEFI on your system.".into());
+    }
+    let bios_dir1 = Path::new("/usr/lib/grub/i386-pc");
+    let bios_dir2 = Path::new("/usr/share/grub/i386-pc");
+    if !bios_dir1.exists() && !bios_dir2.exists() {
+        return Err("GRUB i386-pc modules missing! Please install GRUB BIOS on your system.".into());
+    }
+    print_success("All build dependencies satisfied.");
+    Ok(())
+}
+
 fn run_command(cmd: &str, args: &[&str]) -> Result<(), String> {
     let status = Command::new(cmd)
         .args(args)
@@ -400,6 +424,7 @@ fn main() {
         print_error("Root permission required. Use 'sudo' for this operation.");
         exit(1);
     }
+    check_host_dependencies()?;
     let workspace = PathBuf::from("/home/liskaiso-workspace");
     fs::create_dir_all(&workspace).ok();
     if let Err(e) = build_iso(&workspace) {
