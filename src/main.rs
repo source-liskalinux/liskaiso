@@ -67,6 +67,27 @@ fn run_command(cmd: &str, args: &[&str]) -> Result<(), String> {
     }
 }
 
+fn load_package_list(workspace: &Path) -> Vec<String> {
+    let pkg_file = workspace.join("packages");
+    if pkg_file.exists() {
+        if let Ok(content) = fs::read_to_string(&pkg_file) {
+            let pkgs: Vec<String> = content
+                .lines()
+                .map(|s| s.trim().to_string())
+                .filter(|s| !s.is_empty() && !s.starts_with('#'))
+                .collect();
+            if !pkgs.is_empty() {
+                print_info(&format!("Loaded {} packages from {}", pkgs.len(), pkg_file.display()));
+                return pkgs;
+            }
+        }
+    }
+    let default_content = PACKAGES.join("\n");
+    let _ = fs::write(&pkg_file, default_content);
+    print_info(&format!("Created default package list at {}", pkg_file.display()));
+    PACKAGES.iter().map(|s| s.to_string()).collect()
+}
+
 fn run_lkpm_smart_timeout(cmd: &str, args: &[&str]) -> Result<(), String> {
     let mut child = Command::new(cmd)
         .args(args)
@@ -178,7 +199,7 @@ fn run_lkpm_smart_timeout(cmd: &str, args: &[&str]) -> Result<(), String> {
     }
 }
 
-fn install_package_pool(root: &Path, packages: &[&str]) -> Result<(), String> {
+fn install_package_pool(root: &Path, packages: &[String]) -> Result<(), String> {
     let mut queue: Vec<String> = packages.iter().map(|s| s.to_string()).collect();
     let _ = run_command("lkpm", &["-r"]);
     while let Some(pkg) = queue.pop() {
@@ -214,7 +235,7 @@ fn install_package_pool(root: &Path, packages: &[&str]) -> Result<(), String> {
     Ok(())
 }
 
-fn build_iso(workspace: &Path) -> Result<PathBuf, String> {
+fn build_iso(workspace: &Path, version: &str) -> Result<PathBuf, String> {
     let root = workspace.join("airootfs");
     let iso_root = workspace.join("iso_root");
     fs::remove_dir_all(&root).ok();
@@ -222,7 +243,8 @@ fn build_iso(workspace: &Path) -> Result<PathBuf, String> {
     fs::create_dir_all(&root).ok();
     fs::create_dir_all(&iso_root.join("boot")).ok();
     print_info("Building Liska Linux ISO....");
-    install_package_pool(&root, PACKAGES)?;
+    let packages = load_package_list(workspace);
+    install_package_pool(&root, &packages)?;
     let sbin_dir = root.join("sbin");
     let usr_sbin_dir = root.join("usr/sbin");
     fs::create_dir_all(&sbin_dir).ok();
@@ -366,7 +388,8 @@ fn build_iso(workspace: &Path) -> Result<PathBuf, String> {
         "-noappend",
     ])?;
     write_grub_cfg(&iso_root.join("boot/grub/grub.cfg"))?;
-    let iso_path = workspace.join("liskalinux-x86_64.iso");
+    let iso_filename = format!("liskalinux-{}-x86_64.iso", version);
+    let iso_path = workspace.join(iso_filename);
     print_info(&format!("Building ISO: {}", iso_path.display()));
     run_command("grub-mkrescue", &["-o", iso_path.to_str().unwrap(), iso_root.to_str().unwrap()])?;
     print_success(&format!("Successfully built Liska Linux ISO at {}.", iso_path.display()));
@@ -429,7 +452,7 @@ fn main() {
         println!("-----------------------------------");
         println!("::: [ Liska Linux ISO Builder ] :::");
         println!("-----------------------------------");
-        println!("Usage: sudo liskaiso");
+        println!("Usage: liskaiso --version=<version (default: 2026)>");
         println!("");
         return;
     }
@@ -437,10 +460,21 @@ fn main() {
         print_error("Root permission required. Use 'sudo' for this operation.");
         exit(1);
     }
+    let mut version = String::from("2026");
+    let mut i = 1;
+    while i < args.len() {
+        if args[i].starts_with("--version=") {
+            version = args[i].trim_start_matches("--version=").to_string();
+        } else if args[i] == "--version" && i + 1 < args.len() {
+            version = args[i + 1].clone();
+            i += 1;
+        }
+        i += 1;
+    }
     let _ = check_host_dependencies();
     let workspace = PathBuf::from("/home/liskaiso-workspace");
     fs::create_dir_all(&workspace).ok();
-    if let Err(e) = build_iso(&workspace) {
+    if let Err(e) = build_iso(&workspace, &version) {
         print_error(&format!("Failed to build Liska Linux ISO: {}", e));
         exit(1);
     }
