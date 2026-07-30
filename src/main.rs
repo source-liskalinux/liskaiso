@@ -227,14 +227,14 @@ fn build_iso(workspace: &Path) -> Result<PathBuf, String> {
     let usr_sbin_dir = root.join("usr/sbin");
     fs::create_dir_all(&sbin_dir).ok();
     fs::create_dir_all(&usr_sbin_dir).ok();
-    let systemctl_target = root.join("usr/bin/systemctl");
+    let systemctl_target = Path::new("/usr/bin/systemctl");
     for cmd in &["reboot", "shutdown", "poweroff", "halt"] {
         let sbin_link = sbin_dir.join(cmd);
         let usr_sbin_link = usr_sbin_dir.join(cmd);
         let _ = fs::remove_file(&sbin_link);
         let _ = fs::remove_file(&usr_sbin_link);
-        let _ = symlink(&systemctl_target, &sbin_link);
-        let _ = symlink(&systemctl_target, &usr_sbin_link);
+        let _ = symlink(systemctl_target, &sbin_link);
+        let _ = symlink(systemctl_target, &usr_sbin_link);
     }
     print_info("Enabling systemd core services....");
     let multi_user_wants = root.join("etc/systemd/system/multi-user.target.wants");
