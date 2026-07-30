@@ -420,7 +420,7 @@ fn write_grub_cfg(path: &Path) -> Result<(), String> {
          set default=0\n\
          search --no-floppy --file --set=root /boot/vmlinuz-linux\n\
          \n\
-         menuentry \"Liska Linux x86_64\" {\n\
+         menuentry \"Liska Linux\" {\n\
              linux /boot/vmlinuz-linux rw console=tty1 loglevel=3 audit=0 systemd.show_status=1 quiet cow_spacesize=2G\n\
              initrd /boot/initramfs-liska.img\n\
          }\n\
@@ -452,6 +452,7 @@ fn main() {
         println!("-----------------------------------");
         println!("::: [ Liska Linux ISO Builder ] :::");
         println!("-----------------------------------");
+        println!("");
         println!("Usage: liskaiso --version=<version (default: 2026)>");
         println!("");
         return;
