@@ -441,7 +441,7 @@ fn main() {
         print_error("Root permission required. Use 'sudo' for this operation.");
         exit(1);
     }
-    check_host_dependencies()?;
+    check_host_dependencies();
     let workspace = PathBuf::from("/home/liskaiso-workspace");
     fs::create_dir_all(&workspace).ok();
     if let Err(e) = build_iso(&workspace) {
