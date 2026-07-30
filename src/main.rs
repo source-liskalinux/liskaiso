@@ -324,10 +324,6 @@ fn build_iso(workspace: &Path) -> Result<PathBuf, String> {
     let _ = fs::remove_file(&localtime_path);
     let _ = symlink("/usr/share/zoneinfo/UTC", &localtime_path);
     let _ = fs::write(root.join("etc/timezone"), "UTC\n");
-    let mirrorlist_src = PathBuf::from("src/mirrorlist");
-    fs::create_dir_all(root.join("etc/lkpm.d")).ok();
-    let _ = fs::copy(&mirrorlist_src, root.join("etc/lkpm.d/mirrorlist"));
-    print_info("Copied lkpm mirrorlist configuration");
     let os_release_src = PathBuf::from("src/os-release");
     fs::create_dir_all(root.join("etc")).ok();
     if os_release_src.exists() {
