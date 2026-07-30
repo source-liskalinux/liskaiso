@@ -366,21 +366,21 @@ fn write_grub_cfg(path: &Path) -> Result<(), String> {
         "set timeout=5\n\
          set default=0\n\
          \n\
-         menuentry \"Liska Linux x86_64\" {{\n\
+         menuentry \"Liska Linux x86_64\" {\n\
              linux /boot/vmlinuz-linux rw console=tty1 loglevel=3 audit=0 systemd.show_status=1 quiet cow_spacesize=2G\n\
              initrd /boot/initramfs-liska.img\n\
-         }}\n\
+         }\n\
          \n\
-         menuentry \"Memtest86 Utility\" {{\n\
+         menuentry \"Memtest86 Utility\" {\n\
              insmod part_gpt\n\
              insmod fat\n\
              set root='hd0,gpt1'\n\
              chainloader /EFI/memtest/memtest86.efi\n\
-         }}\n\
+         }\n\
          \n\
-         menuentry \"UEFI Firmware Settings\" --class efi {{\n\
+         menuentry \"UEFI Firmware Settings\" --class efi {\n\
              fwsetup\n\
-         }}\n\
+         }\n\
          ";
     fs::write(path, content).map_err(|e| e.to_string())
 }
