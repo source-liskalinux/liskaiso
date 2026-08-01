@@ -1,4 +1,4 @@
-# PKGBUILD for liskaiso
+# PKGBUILD For liskaiso
 
 # Contributor: Janorovic Volkov <janorovicvolkov@gmail.com>
 # Maintainer: Janorovic Volkov <janorovicvolkov@gmail.com>
