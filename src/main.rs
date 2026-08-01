@@ -46,11 +46,6 @@ fn check_host_dependencies() -> Result<(), String> {
     if !efi_dir1.exists() && !efi_dir2.exists() {
         return Err("GRUB x86_64-efi modules missing! Please install GRUB UEFI on your system.".into());
     }
-    let bios_dir1 = Path::new("/usr/lib/grub/i386-pc");
-    let bios_dir2 = Path::new("/usr/share/grub/i386-pc");
-    if !bios_dir1.exists() && !bios_dir2.exists() {
-        return Err("GRUB i386-pc modules missing! Please install GRUB BIOS on your system.".into());
-    }
     print_success("All build dependencies satisfied.");
     Ok(())
 }
@@ -215,7 +210,7 @@ fn install_package_pool(root: &Path, packages: &[String]) -> Result<(), String> 
             print_error(&format!("Skipping non-critical package {}: {}", pkg, e));
             continue;
         }
-        let check = Command::new("lkpm").args(&["-l", &pkg, "--root", root.to_str().unwrap()]).output();
+        let check = Command::new("lkpm").args(&["-p", &pkg, "--root", root.to_str().unwrap()]).output();
         if let Ok(out) = check {
             let report = String::from_utf8_lossy(&out.stdout);
             for line in report.lines() {
