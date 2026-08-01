@@ -1,4 +1,4 @@
-# PKGBUILD For Liska ISO
+# PKGBUILD for liskaiso
 
 # Contributor: Janorovic Volkov <janorovicvolkov@gmail.com>
 # Maintainer: Janorovic Volkov <janorovicvolkov@gmail.com>
