@@ -5,6 +5,7 @@ lkpm
 lkchroot
 lkstrap
 lkfstab
+lkfs
 systemd
 dbus
 glibc
