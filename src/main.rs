@@ -18,7 +18,7 @@ const EMBED_ZSHRC: &str = include_str!("./.zshrc");
 const EMBED_OS_RELEASE: &str = include_str!("./os-release");
 const PACKAGES: &[&str] = &[
     "linux", "linux-headers", "linux-firmware", "lkpm", "lkchroot", "lkstrap",
-    "lkfstab", "systemd", "dbus", "glibc", "busybox", "zsh", "sudo", "efibootmgr",
+    "lkfstab", "lkfs", "systemd", "dbus", "glibc", "busybox", "zsh", "sudo", "efibootmgr",
     "networkmanager", "modemmanager", "usb_modeswitch", "inetutils", "bash",
     "nano", "vim", "grub", "wget", "curl", "git", "which", "man-db",
     "man-pages", "util-linux", "coreutils", "findutils", "sed", "grep", "kmod",
