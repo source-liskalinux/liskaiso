@@ -24,7 +24,7 @@ const PACKAGES: &[&str] = &[
     "man-pages", "util-linux", "coreutils", "findutils", "sed", "grep", "kmod",
     "e2fsprogs", "iputils", "gptfdisk", "parted", "dosfstools", "btrfs-progs",
     "xfsprogs", "ca-certificates", "libnghttp3", "libnghttp2", "libpsl", "libidn2",
-    "brotli", "memtest86+", "memtest86+-efi"
+    "brotli", "memtest86+-efi"
 ];
 
 fn print_info(msg: &str) { println!("{}[i]{} {}", CYAN, RESET, msg); }
@@ -41,10 +41,10 @@ fn check_host_dependencies() -> Result<(), String> {
             _ => return Err(format!("'{}' missing! Please install {} on your system to run liskaiso.", tool, tool)),
         }
     }
-    let efi_dir1 = Path::new("/usr/lib/grub/x86_64-efi");
-    let efi_dir2 = Path::new("/usr/share/grub/x86_64-efi");
-    if !efi_dir1.exists() && !efi_dir2.exists() {
-        return Err("GRUB x86_64-efi modules missing! Please install GRUB UEFI on your system.".into());
+    let has_efi64 = Path::new("/usr/lib/grub/x86_64-efi").exists() || Path::new("/usr/share/grub/x86_64-efi").exists();
+    let has_efi32 = Path::new("/usr/lib/grub/i386-efi").exists() || Path::new("/usr/share/grub/i386-efi").exists();
+    if !has_efi64 && !has_efi32 {
+        return Err("GRUB UEFI modules missing! Please install GRUB on your system to run liskaiso.".into());
     }
     print_success("All build dependencies satisfied.");
     Ok(())
@@ -355,12 +355,6 @@ fn build_iso(workspace: &Path, version: &str) -> Result<PathBuf, String> {
         return Err("FATAL: vmlinuz-linux not found in rootfs!".into());
     }
     fs::copy(&kernel_src, iso_root.join("boot/vmlinuz-linux")).map_err(|e| e.to_string())?;
-    let memtest86_bin = root.join("boot/memtest86+/memtest.bin");
-    if memtest86_bin.exists() {
-        let bios_dst = iso_root.join("boot/memtest86+");
-        fs::create_dir_all(&bios_dst).ok();
-        let _ = fs::copy(&memtest86_bin, bios_dst.join("memtest.bin"));
-    }
     let memtest86_efi = root.join("boot/memtest86+/memtest.efi");
     if memtest86_efi.exists() {
         let efi_dst = iso_root.join("EFI/memtest");
@@ -411,6 +405,8 @@ fn write_grub_cfg(path: &Path) -> Result<(), String> {
          insmod part_msdos\n\
          insmod part_gpt\n\
          insmod fat\n\
+         insmod efi_gop\n\
+         insmod efi_uga\n\
          set timeout=5\n\
          set default=0\n\
          search --no-floppy --file --set=root /boot/vmlinuz-linux\n\
@@ -420,22 +416,16 @@ fn write_grub_cfg(path: &Path) -> Result<(), String> {
              initrd /boot/initramfs-liska.img\n\
          }\n\
          \n\
-         if [ \"${grub_platform}\" = \"pc\" ]; then\n\
-             menuentry \"BIOS Memtest86+ Utility\" {\n\
-                 search --no-floppy --file --set=root /boot/memtest86+/memtest.bin\n\
-                 linux16 /boot/memtest86+/memtest.bin\n\
-             }\n\
-         fi\n\
-         if [ \"${grub_platform}\" = \"efi\" ]; then\n\
-             menuentry \"UEFI Memtest86+ Utility\" {\n\
+         if [ -f /EFI/memtest/memtest86.efi ]; then\n\
+             menuentry \"Memtest86+ Utility\" {\n\
                  search --no-floppy --file --set=root /EFI/memtest/memtest86.efi\n\
                  chainloader /EFI/memtest/memtest86.efi\n\
              }\n\
-             \n\
-             menuentry \"UEFI Firmware Settings\" --class efi {\n\
-                 fwsetup\n\
-             }\n\
          fi\n\
+         \n\
+         menuentry \"UEFI Firmware Settings\" --class efi {\n\
+             fwsetup\n\
+         }\n\
          ";
     fs::write(path, content).map_err(|e| e.to_string())
 }
