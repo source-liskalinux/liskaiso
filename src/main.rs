@@ -20,11 +20,11 @@ const PACKAGES: &[&str] = &[
     "linux", "linux-headers", "linux-firmware", "lkpm", "lkchroot", "lkstrap",
     "lkfstab", "systemd", "dbus", "glibc", "busybox", "zsh", "sudo", "efibootmgr",
     "networkmanager", "modemmanager", "usb_modeswitch", "inetutils", "bash",
-    "nano", "vim", "grub", "libverto", "wget", "curl", "git", "which", "man-db",
+    "nano", "vim", "grub", "wget", "curl", "git", "which", "man-db",
     "man-pages", "util-linux", "coreutils", "findutils", "sed", "grep", "kmod",
     "e2fsprogs", "iputils", "gptfdisk", "parted", "dosfstools", "btrfs-progs",
     "xfsprogs", "ca-certificates", "libnghttp3", "libnghttp2", "libpsl", "libidn2",
-    "brotli", "memtest86+-efi"
+    "brotli", "memtest86+-efi", "krb5"
 ];
 
 fn print_info(msg: &str) { println!("{}[i]{} {}", CYAN, RESET, msg); }
