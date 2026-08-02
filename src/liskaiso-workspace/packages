@@ -20,7 +20,6 @@ bash
 nano
 vim
 grub
-libverto
 wget
 curl
 git
@@ -46,5 +45,5 @@ libnghttp2
 libpsl
 libidn2
 brotli
-memtest86+
 memtest86+-efi
+krb5
