@@ -8,11 +8,7 @@ use std::process::{exit, Command, Stdio};
 use std::sync::mpsc;
 use std::thread;
 use std::time::Duration;
-
-const CYAN: &str = "\x1b[36m";
-const GREEN: &str = "\x1b[92m";
-const RED: &str = "\x1b[31m";
-const RESET: &str = "\x1b[0m";
+use colored::*;
 
 const EMBED_ZSHRC: &str = include_str!("./.zshrc");
 const EMBED_OS_RELEASE: &str = include_str!("./os-release");
@@ -27,24 +23,24 @@ const PACKAGES: &[&str] = &[
     "brotli", "memtest86+-efi", "krb5"
 ];
 
-fn print_info(msg: &str) { println!("{}[i]{} {}", CYAN, RESET, msg); }
-fn print_success(msg: &str) { println!("{}[+]{} {}{}{}", CYAN, RESET, GREEN, msg, RESET); }
-fn print_error(msg: &str) { println!("{}[-]{} {}{}{}", CYAN, RESET, RED, msg, RESET); }
+fn print_info(msg: &str) { println!("{} {}", "::: [ LISKAISO ] ::: (i) >".cyan(), msg); }
+fn print_success(msg: &str) { println!("{} {}", "::: [ LKMAKE ] ::: (✓) >".green(), msg.green()); }
+fn print_error(msg: &str) { println!("{} {}", "::: [ LISKAISO ] ::: (✗) >".red(), msg.red()); }
 
 fn check_host_dependencies() -> Result<(), String> {
-    print_info("Checking dependencies for ISO generation....");
+    print_info("Checking liskaiso dependencies....");
     let required_tools = ["grub-mkrescue", "xorriso", "mformat", "mkfs.fat"];
     for tool in &required_tools {
         let check = Command::new("which").arg(tool).output();
         match check {
             Ok(out) if out.status.success() => {},
-            _ => return Err(format!("'{}' missing! Please install {} on your system to run liskaiso.", tool, tool)),
+            _ => return Err(format!("'{}' is missing! Please install {} on your system to run liskaiso.", tool, tool)),
         }
     }
     let has_efi64 = Path::new("/usr/lib/grub/x86_64-efi").exists() || Path::new("/usr/share/grub/x86_64-efi").exists();
     let has_efi32 = Path::new("/usr/lib/grub/i386-efi").exists() || Path::new("/usr/share/grub/i386-efi").exists();
     if !has_efi64 && !has_efi32 {
-        return Err("GRUB UEFI modules missing! Please install GRUB on your system to run liskaiso.".into());
+        return Err("GRUB UEFI modules is missing! Please install GRUB package on your system to run liskaiso.".into());
     }
     print_success("All build dependencies satisfied.");
     Ok(())
@@ -79,150 +75,13 @@ fn load_package_list(workspace: &Path) -> Vec<String> {
     }
     let default_content = PACKAGES.join("\n");
     let _ = fs::write(&pkg_file, default_content);
-    print_info(&format!("Created default package list at {}", pkg_file.display()));
+    print_info(&format!("Successfully creating default package list at {}", pkg_file.display()));
     PACKAGES.iter().map(|s| s.to_string()).collect()
 }
 
-fn run_lkpm_smart_timeout(cmd: &str, args: &[&str]) -> Result<(), String> {
-    let mut child = Command::new(cmd)
-        .args(args)
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .process_group(0)
-        .spawn()
-        .map_err(|e| e.to_string())?;
-    let stdout = child.stdout.take().ok_or("Failed to capture stdout")?;
-    let stderr = child.stderr.take().ok_or("Failed to capture stderr")?;
-    let mut deadline: Option<std::time::Instant> = Some(std::time::Instant::now() + Duration::from_secs(30));
-    let mut operation_started = false;
-    #[derive(Debug)]
-    enum ReaderMsg {
-        OperationStarted,
-    }
-    let (tx, rx) = mpsc::channel::<ReaderMsg>();
-    let tx_clone = tx.clone();
-    let tx_clone_err = tx.clone();
-    let strip_ansi = |s: &str| -> String {
-        let mut out = String::with_capacity(s.len());
-        let mut chars = s.chars().peekable();
-        while let Some(c) = chars.next() {
-            if c == '\x1b' {
-                if let Some('[') = chars.peek() {
-                    chars.next();
-                    while let Some(nc) = chars.next() {
-                        if ('@'..='~').contains(&nc) { break; }
-                    }
-                    continue;
-                }
-            }
-            out.push(c);
-        }
-        out
-    };
-    let strip_ansi_stdout = strip_ansi;
-    thread::spawn(move || {
-        let mut reader = BufReader::new(stdout);
-        let mut line = String::new();
-        loop {
-            line.clear();
-            match reader.read_line(&mut line) {
-                Ok(0) => break,
-                Ok(_) => {
-                    let raw = line.trim_end();
-                    let l = strip_ansi_stdout(raw).replace('\r', "");
-                    if l.contains("Initialize the operation") {
-                        let _ = tx_clone.send(ReaderMsg::OperationStarted);
-                    }
-                    println!("{}", l);
-                }
-                Err(_) => break,
-            }
-        }
-    });
-    thread::spawn(move || {
-        let mut reader = BufReader::new(stderr);
-        let mut line = String::new();
-        loop {
-            line.clear();
-            match reader.read_line(&mut line) {
-                Ok(0) => break,
-                Ok(_) => {
-                    let raw = line.trim_end();
-                    let l = strip_ansi(raw).replace('\r', "");
-                    if l.contains("Initialize the operation") {
-                        let _ = tx_clone_err.send(ReaderMsg::OperationStarted);
-                    }
-                    eprintln!("{}", l);
-                }
-                Err(_) => break,
-            }
-        }
-    });
-    loop {
-        while let Ok(msg) = rx.try_recv() {
-            match msg {
-                ReaderMsg::OperationStarted => {
-                    if !operation_started {
-                        operation_started = true;
-                        deadline = None;
-                        print_info("Timeout was disabled");
-                    }
-                }
-            }
-        }
-        match child.try_wait() {
-            Ok(Some(status)) => {
-                if status.success() {
-                    return Ok(());
-                } else {
-                    return Err("Command failed".to_string());
-                }
-            }
-            Ok(None) => {
-                if let Some(d) = deadline {
-                    if std::time::Instant::now() > d {
-                        let pid = child.id() as i32;
-                        unsafe { libc::kill(-pid, libc::SIGKILL); }
-                        child.kill().ok();
-                        return Err("Timeout (30s) reached waiting for operation to start".to_string());
-                    }
-                }
-            }
-            Err(e) => return Err(e.to_string()),
-        }
-        thread::sleep(Duration::from_millis(200));
-    }
-}
-
 fn install_package_pool(root: &Path, packages: &[String]) -> Result<(), String> {
-    let mut queue: Vec<String> = packages.iter().map(|s| s.to_string()).collect();
     let _ = run_command("lkpm", &["-r"]);
-    while let Some(pkg) = queue.pop() {
-        if pkg.ends_with(".so") {
-            print_info(&format!("Skipping invalid package format: {}", pkg));
-            continue;
-        }
-        print_info(&format!("Initializing: {}", pkg));
-        if let Err(e) = run_lkpm_smart_timeout("lkpm", &["-i", "--root", root.to_str().unwrap(), "--noconfirm", &pkg]) {
-            if pkg == "linux" {
-                return Err(format!("CRITICAL: Failed to download linux kernel (error: {}). Build canceled!", e));
-            }
-            print_error(&format!("Skipping non-critical package {}: {}", pkg, e));
-            continue;
-        }
-        let check = Command::new("lkpm").args(&["-p", &pkg, "--root", root.to_str().unwrap()]).output();
-        if let Ok(out) = check {
-            let report = String::from_utf8_lossy(&out.stdout);
-            for line in report.lines() {
-                if line.contains("(missing)") {
-                    let dep = line.replace(">", "").replace("(missing)", "").trim().split_whitespace().next().unwrap_or("").to_string();
-                    if !dep.is_empty() && !dep.ends_with(".so") && !queue.contains(&dep) {
-                        queue.push(dep);
-                    }
-                }
-            }
-        }
-    }
+    let _ = run_command("lkpm", &["-id", "--root", root.to_str().unwrap(), "--noconfirm", packages]);
     let kernel_check = root.join("boot/vmlinuz-linux");
     if !kernel_check.exists() {
         return Err("FATAL: vmlinuz-linux not found on rootfs!".to_string());
@@ -326,7 +185,7 @@ fn build_iso(workspace: &Path, version: &str) -> Result<PathBuf, String> {
     if target_getty.exists() && !link_getty.exists() {
         let _ = symlink("../getty@.service", &link_getty);
     }
-    print_info("Configuring autologin for tty1....");
+    print_info("Configuring autologin....");
     let getty_override_dir = root.join("etc/systemd/system/getty@tty1.service.d");
     fs::create_dir_all(&getty_override_dir).ok();
     let autologin_conf = 
@@ -434,9 +293,9 @@ fn main() {
     let args: Vec<String> = env::args().collect();
     if args.len() > 1 && (args[1] == "--help" || args[1] == "-h") {
         println!("");
-        println!("-----------------------------------");
-        println!("::: [ Liska Linux ISO Builder ] :::");
-        println!("-----------------------------------");
+        println!("----------------------------------------");
+        println!("::: [ Liska ISO Builder (v1.0.0-1) ] :::");
+        println!("----------------------------------------");
         println!("");
         println!("Usage: liskaiso --version=<version (default: 2026)>");
         println!("");
