@@ -1,13 +1,8 @@
 use std::env;
 use std::fs;
-use std::io::{BufRead, BufReader};
 use std::os::unix::fs::symlink;
-use std::os::unix::process::CommandExt;
 use std::path::{Path, PathBuf};
-use std::process::{exit, Command, Stdio};
-use std::sync::mpsc;
-use std::thread;
-use std::time::Duration;
+use std::process::{exit, Command};
 use colored::*;
 
 const EMBED_ZSHRC: &str = include_str!("./.zshrc");
@@ -81,7 +76,7 @@ fn load_package_list(workspace: &Path) -> Vec<String> {
 
 fn install_package_pool(root: &Path, packages: &[String]) -> Result<(), String> {
     let _ = run_command("lkpm", &["-r"]);
-    let _ = run_command("lkpm", &["-id", "--root", root.to_str().unwrap(), "--noconfirm", packages]);
+    let _ = run_command("lkpm", &["-id", "--root", root.to_str().unwrap(), "--noconfirm", &packages.join(" ")]);
     let kernel_check = root.join("boot/vmlinuz-linux");
     if !kernel_check.exists() {
         return Err("FATAL: vmlinuz-linux not found on rootfs!".to_string());
