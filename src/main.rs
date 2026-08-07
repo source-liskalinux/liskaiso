@@ -5,25 +5,23 @@ use std::path::{Path, PathBuf};
 use std::process::{exit, Command};
 use colored::*;
 
-const EMBED_ZSHRC: &str = include_str!("./.zshrc");
-const EMBED_OS_RELEASE: &str = include_str!("./os-release");
 const PACKAGES: &[&str] = &[
-    "linux", "linux-headers", "linux-firmware", "lkpm", "lkchroot", "lkstrap",
-    "lkfstab", "lkfs", "systemd", "dbus", "glibc", "busybox", "zsh", "sudo", "efibootmgr",
+    "linux", "linux-headers", "linux-firmware", "lkfs", "lkpm", "lksystem",
+    "liska-install-scripts", "dbus", "glibc", "busybox", "zsh", "sudo", "efibootmgr",
     "networkmanager", "modemmanager", "usb_modeswitch", "inetutils", "bash",
-    "nano", "vim", "grub", "wget", "curl", "git", "which", "man-db",
-    "man-pages", "util-linux", "coreutils", "findutils", "sed", "grep", "kmod",
-    "e2fsprogs", "iputils", "gptfdisk", "parted", "dosfstools", "btrfs-progs",
-    "xfsprogs", "ca-certificates", "libnghttp3", "libnghttp2", "libpsl", "libidn2",
-    "brotli", "memtest86+-efi", "krb5"
+    "nano", "vim", "grub", "wget", "curl", "git", "which", "man-db", "man-pages",
+    "util-linux", "coreutils", "findutils", "sed", "grep", "kmod", "e2fsprogs",
+    "iputils", "gptfdisk", "parted", "dosfstools", "btrfs-progs", "xfsprogs",
+    "ca-certificates", "libnghttp3", "libnghttp2", "libpsl", "libidn2", "brotli",
+    "memtest86+-efi", "krb5"
 ];
 
-fn print_info(msg: &str) { println!("{} {}", "::: [ LISKAISO ] ::: (i) >".cyan(), msg); }
-fn print_success(msg: &str) { println!("{} {}", "::: [ LKMAKE ] ::: (✓) >".green(), msg.green()); }
-fn print_error(msg: &str) { println!("{} {}", "::: [ LISKAISO ] ::: (✗) >".red(), msg.red()); }
+fn info(msg: &str) { println!("{} {}", "::: [ LISKAISO ] ::: (i) >".bright_cyan(), msg); }
+fn success(msg: &str) { println!("{} {}", "::: [ LISKAISO ] ::: (✓) >".bright_green(), msg.bright_green()); }
+fn error(msg: &str) { println!("{} {}", "::: [ LISKAISO ] ::: (✗) >".bright_red(), msg.bright_red()); }
 
 fn check_host_dependencies() -> Result<(), String> {
-    print_info("Checking liskaiso dependencies....");
+    info("Checking liskaiso dependencies....");
     let required_tools = ["grub-mkrescue", "xorriso", "mformat", "mkfs.fat"];
     for tool in &required_tools {
         let check = Command::new("which").arg(tool).output();
@@ -37,7 +35,7 @@ fn check_host_dependencies() -> Result<(), String> {
     if !has_efi64 && !has_efi32 {
         return Err("GRUB UEFI modules is missing! Please install GRUB package on your system to run liskaiso.".into());
     }
-    print_success("All build dependencies satisfied.");
+    success("All build dependencies satisfied.");
     Ok(())
 }
 
@@ -63,14 +61,14 @@ fn load_package_list(workspace: &Path) -> Vec<String> {
                 .filter(|s| !s.is_empty() && !s.starts_with('#'))
                 .collect();
             if !pkgs.is_empty() {
-                print_info(&format!("Loaded {} packages from {}", pkgs.len(), pkg_file.display()));
+                info(&format!("Loaded {} packages from {}", pkgs.len(), pkg_file.display()));
                 return pkgs;
             }
         }
     }
     let default_content = PACKAGES.join("\n");
     let _ = fs::write(&pkg_file, default_content);
-    print_info(&format!("Successfully creating default package list at {}", pkg_file.display()));
+    info(&format!("Successfully loaded default package list at {}", pkg_file.display()));
     PACKAGES.iter().map(|s| s.to_string()).collect()
 }
 
@@ -87,18 +85,16 @@ fn install_package_pool(root: &Path, packages: &[String]) -> Result<(), String> 
 fn build_iso(workspace: &Path, version: &str) -> Result<PathBuf, String> {
     let root = workspace.join("airootfs");
     let iso_root = workspace.join("iso_root");
-    fs::remove_dir_all(&root).ok();
-    fs::remove_dir_all(&iso_root).ok();
     fs::create_dir_all(&root).ok();
-    fs::create_dir_all(&iso_root.join("boot")).ok();
-    print_info("Building Liska Linux ISO....");
+    fs::create_dir_all(&iso_root).ok();
+    info("Building Liska Linux ISO....");
     let packages = load_package_list(workspace);
     install_package_pool(&root, &packages)?;
     let sbin_dir = root.join("sbin");
     let usr_sbin_dir = root.join("usr/sbin");
     fs::create_dir_all(&sbin_dir).ok();
     fs::create_dir_all(&usr_sbin_dir).ok();
-    let systemctl_target = Path::new("/usr/bin/systemctl");
+    let systemctl_target = Path::new("/usr/bin/lksystemctl");
     for cmd in &["reboot", "shutdown", "poweroff", "halt"] {
         let sbin_link = sbin_dir.join(cmd);
         let usr_sbin_link = usr_sbin_dir.join(cmd);
@@ -106,39 +102,6 @@ fn build_iso(workspace: &Path, version: &str) -> Result<PathBuf, String> {
         let _ = fs::remove_file(&usr_sbin_link);
         let _ = symlink(systemctl_target, &sbin_link);
         let _ = symlink(systemctl_target, &usr_sbin_link);
-    }
-    print_info("Enabling systemd core services....");
-    let multi_user_wants = root.join("etc/systemd/system/multi-user.target.wants");
-    fs::create_dir_all(&multi_user_wants).ok();
-    let services_to_enable = &[
-        ("NetworkManager.service", "/usr/lib/systemd/system/NetworkManager.service"),
-        ("dbus.service", "/usr/lib/systemd/system/dbus.service"),
-        ("seatd.service", "/usr/lib/systemd/system/seatd.service"),
-        ("systemd-networkd.service", "/usr/lib/systemd/system/systemd-networkd.service"),
-        ("systemd-resolved.service", "/usr/lib/systemd/system/systemd-resolved.service"),
-    ];
-    for (service_name, target_path) in services_to_enable {
-        let symlink_path = multi_user_wants.join(service_name);
-        if !symlink_path.exists() && root.join(target_path.trim_start_matches('/')).exists() {
-            let _ = symlink(target_path, &symlink_path);
-        }
-    }
-    let global_zsh_dir = root.join("etc/zsh");
-    fs::create_dir_all(&global_zsh_dir).ok();
-    let custom_zshrc_content = 
-        "export TERM=xterm-256color\n\
-         export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\n\
-        ";
-    fs::write(global_zsh_dir.join("zshrc"), custom_zshrc_content).map_err(|e| e.to_string())?;
-    let root_zshrc = root.join("root/.zshrc");
-    fs::create_dir_all(root.join("root")).ok();
-    let local_zshrc = PathBuf::from("src/.zshrc");
-    if local_zshrc.exists() {
-        fs::copy(&local_zshrc, &root_zshrc).map_err(|e| e.to_string())?;
-        print_info("Integrated custom src/.zshrc to /root/.zshrc....");
-    } else {
-        fs::write(&root_zshrc, EMBED_ZSHRC).map_err(|e| e.to_string())?;
-        print_info("Installed embedded .zshrc to /root/.zshrc....");
     }
     let passwd_path = root.join("etc/passwd");
     if passwd_path.exists() {
@@ -158,30 +121,8 @@ fn build_iso(workspace: &Path, version: &str) -> Result<PathBuf, String> {
             let _ = fs::write(&passwd_path, new_lines.join("\n"));
         }
     }
-    let profile_path = root.join("etc/profile");
-    let auto_zsh_script = 
-        "if [ -t 1 ] && [ -n \"$PS1\" ] && [ -x /usr/bin/zsh ] && [ \"$(basename \"$SHELL\")\" = \"bash\" ]; then\n\
-             export SHELL=/usr/bin/zsh\n\
-             export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\n\
-             exec /usr/bin/zsh -l\n\
-         fi\n\
-        ";
-    if let Ok(mut current_profile) = fs::read_to_string(&profile_path) {
-        current_profile.push_str(auto_zsh_script);
-        let _ = fs::write(&profile_path, current_profile);
-    } else {
-        let _ = fs::write(&profile_path, auto_zsh_script);
-    }
-    print_info("Injected zsh to /etc/profile.");
-    let system_units_dir = root.join("etc/systemd/system/getty.target.wants");
-    fs::create_dir_all(&system_units_dir).ok();
-    let target_getty = root.join("lib/systemd/system/getty@.service");
-    let link_getty = system_units_dir.join("getty@tty1.service");
-    if target_getty.exists() && !link_getty.exists() {
-        let _ = symlink("../getty@.service", &link_getty);
-    }
-    print_info("Configuring autologin....");
-    let getty_override_dir = root.join("etc/systemd/system/getty@tty1.service.d");
+    info("Configuring autologin....");
+    let getty_override_dir = root.join("etc/lksystem/system/getty1.service");
     fs::create_dir_all(&getty_override_dir).ok();
     let autologin_conf = 
         "[Service]\n\
@@ -190,20 +131,11 @@ fn build_iso(workspace: &Path, version: &str) -> Result<PathBuf, String> {
         ";
     fs::write(getty_override_dir.join("override.conf"), autologin_conf)
         .map_err(|e| e.to_string())?;
-    print_info("Setting default systemd timezone to UTC....");
+    info("Setting default systemd timezone to UTC....");
     let localtime_path = root.join("etc/localtime");
     let _ = fs::remove_file(&localtime_path);
     let _ = symlink("/usr/share/zoneinfo/UTC", &localtime_path);
     let _ = fs::write(root.join("etc/timezone"), "UTC\n");
-    let os_release_src = PathBuf::from("src/os-release");
-    fs::create_dir_all(root.join("etc")).ok();
-    if os_release_src.exists() {
-        fs::copy(&os_release_src, root.join("etc/os-release")).map_err(|e| e.to_string())?;
-        print_info("Copied os-release from src/os-release.");
-    } else {
-        fs::write(root.join("etc/os-release"), EMBED_OS_RELEASE).map_err(|e| e.to_string())?;
-        print_info("Installed embedded os-release.");
-    }
     let kernel_src = root.join("boot/vmlinuz-linux");
     if !kernel_src.exists() {
         return Err("FATAL: vmlinuz-linux not found in rootfs!".into());
@@ -215,32 +147,25 @@ fn build_iso(workspace: &Path, version: &str) -> Result<PathBuf, String> {
         fs::create_dir_all(&efi_dst).ok();
         let _ = fs::copy(&memtest86_efi, efi_dst.join("memtest86.efi"));
     }
-    let sysctl_dir = root.join("etc/sysctl.d");
-    fs::create_dir_all(&sysctl_dir).ok();
-    let _ = fs::write(
-        sysctl_dir.join("20-quiet-printk.conf"),
-        "kernel.printk = 3 3 3 3\n"
-    );
     generate_pure_initramfs(&root, &iso_root)?;
     let squash_target = iso_root.join("liskafs.sfs");
-    print_info("Compressing filesystem into liskafs.sfs....");
+    info("Compressing filesystem into liskafs.sfs....");
     run_command("mksquashfs", &[
         root.to_str().unwrap(),
         squash_target.to_str().unwrap(),
         "-comp", "zstd",
         "-noappend",
     ])?;
-    write_grub_cfg(&iso_root.join("boot/grub/grub.cfg"))?;
     let iso_filename = format!("liskalinux-{}-x86_64.iso", version);
     let iso_path = workspace.join(iso_filename);
-    print_info(&format!("Building ISO: {}", iso_path.display()));
+    info(&format!("Building ISO: {}", iso_path.display()));
     run_command("grub-mkrescue", &["-o", iso_path.to_str().unwrap(), iso_root.to_str().unwrap()])?;
-    print_success(&format!("Successfully built Liska Linux ISO at {}.", iso_path.display()));
+    success(&format!("Successfully built Liska Linux ISO at {}.", iso_path.display()));
     Ok(iso_path)
 }
 
 fn generate_pure_initramfs(rootfs: &Path, iso_root: &Path) -> Result<(), String> {
-    print_info("Calling lkinit to generate initramfs....");
+    info("Calling lkinit to generate initramfs....");
     let target_img = iso_root.join("boot/initramfs-liska.img");
     run_command("lkinit", &[
         "--root", rootfs.to_str().unwrap(),
@@ -248,40 +173,6 @@ fn generate_pure_initramfs(rootfs: &Path, iso_root: &Path) -> Result<(), String>
         "--iso"
     ])?;
     Ok(())
-}
-
-fn write_grub_cfg(path: &Path) -> Result<(), String> {
-    if let Some(parent) = path.parent() {
-        fs::create_dir_all(parent).ok();
-    }
-    let content = 
-        "insmod iso9660\n\
-         insmod part_msdos\n\
-         insmod part_gpt\n\
-         insmod fat\n\
-         insmod efi_gop\n\
-         insmod efi_uga\n\
-         set timeout=5\n\
-         set default=0\n\
-         search --no-floppy --file --set=root /boot/vmlinuz-linux\n\
-         \n\
-         menuentry \"Liska Linux\" {\n\
-             linux /boot/vmlinuz-linux rw console=tty1 loglevel=3 audit=0 systemd.show_status=1 quiet cow_spacesize=2G\n\
-             initrd /boot/initramfs-liska.img\n\
-         }\n\
-         \n\
-         if [ -f /EFI/memtest/memtest86.efi ]; then\n\
-             menuentry \"Memtest86+ Utility\" {\n\
-                 search --no-floppy --file --set=root /EFI/memtest/memtest86.efi\n\
-                 chainloader /EFI/memtest/memtest86.efi\n\
-             }\n\
-         fi\n\
-         \n\
-         menuentry \"UEFI Firmware Settings\" --class efi {\n\
-             fwsetup\n\
-         }\n\
-         ";
-    fs::write(path, content).map_err(|e| e.to_string())
 }
 
 fn main() {
@@ -297,7 +188,7 @@ fn main() {
         return;
     }
     if unsafe { libc::geteuid() } != 0 {
-        print_error("Root permission required. Use 'sudo' for this operation.");
+        error("Root permission required. Use 'sudo' for this operation!");
         exit(1);
     }
     let mut version = String::from("2026");
@@ -315,7 +206,7 @@ fn main() {
     let workspace = PathBuf::from("/home/liskaiso-workspace");
     fs::create_dir_all(&workspace).ok();
     if let Err(e) = build_iso(&workspace, &version) {
-        print_error(&format!("Failed to build Liska Linux ISO: {}", e));
+        error(&format!("Failed to build Liska Linux ISO: {}", e));
         exit(1);
     }
 }

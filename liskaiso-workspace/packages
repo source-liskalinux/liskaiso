@@ -1,12 +1,10 @@
 linux
 linux-headers
 linux-firmware
-lkpm
-lkchroot
-lkstrap
-lkfstab
+liska-install-scripts
 lkfs
-systemd
+lkpm
+lksystem
 dbus
 glibc
 busybox
