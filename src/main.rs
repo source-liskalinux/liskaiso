@@ -179,9 +179,9 @@ fn main() {
     let args: Vec<String> = env::args().collect();
     if args.len() > 1 && (args[1] == "--help" || args[1] == "-h") {
         println!("");
-        println!("----------------------------------------");
-        println!("::: [ Liska ISO Builder (v1.0.0-1) ] :::");
-        println!("----------------------------------------");
+        println!("---------------------------------");
+        println!("::: [ Liska ISO Builder (1) ] :::");
+        println!("---------------------------------");
         println!("");
         println!("Usage: liskaiso --version=<version (default: 2026)>");
         println!("");
