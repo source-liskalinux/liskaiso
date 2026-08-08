@@ -74,7 +74,15 @@ fn load_package_list(workspace: &Path) -> Vec<String> {
 
 fn install_package_pool(root: &Path, packages: &[String]) -> Result<(), String> {
     let _ = run_command("lkpm", &["-r"]);
-    let _ = run_command("lkpm", &["-id", "--root", root.to_str().unwrap(), "--noconfirm", &packages.join(" ")]);
+    let mut args = vec![
+        "-id".to_string(),
+        "--root".to_string(),
+        root.to_str().unwrap().to_string(),
+        "--noconfirm".to_string(),
+    ];
+    args.extend(packages.iter().cloned());
+    let args_ref: Vec<&str> = args.iter().map(|s| s.as_str()).collect();
+    run_command("lkpm", &args_ref)?;
     let kernel_check = root.join("boot/vmlinuz-linux");
     if !kernel_check.exists() {
         return Err("FATAL: vmlinuz-linux not found on rootfs!".to_string());
