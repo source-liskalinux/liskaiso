@@ -73,7 +73,7 @@ fn load_package_list(workspace: &Path) -> Vec<String> {
 }
 
 fn install_package_pool(root: &Path, packages: &[String]) -> Result<(), String> {
-    let _ = run_command("lkpm", &["-r"]);
+    let _ = run_command("lkpm", &["-r", "--root", root.to_str().unwrap()]);
     let mut args = vec![
         "-id".to_string(),
         "--root".to_string(),
