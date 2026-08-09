@@ -130,7 +130,7 @@ fn build_iso(workspace: &Path, version: &str) -> Result<PathBuf, String> {
         }
     }
     info("Configuring autologin....");
-    let getty_override_dir = root.join("etc/lksystem/system/getty1.service");
+    let getty_override_dir = root.join("etc/lksystem/system/getty1.service.d");
     fs::create_dir_all(&getty_override_dir).ok();
     let autologin_conf = 
         "[Service]\n\
