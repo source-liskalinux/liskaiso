@@ -6,7 +6,7 @@ use std::process::{exit, Command};
 use colored::*;
 
 const PACKAGES: &[&str] = &[
-    "linux", "linux-headers", "linux-firmware", "lkfs", "lkpm", "lksystem",
+    "linux", "linux-firmware", "lkfs", "lkpm", "lksystem",
     "liska-install-scripts", "dbus", "glibc", "busybox", "zsh", "sudo", "efibootmgr",
     "networkmanager", "modemmanager", "usb_modeswitch", "inetutils", "bash",
     "nano", "vim", "grub", "wget", "curl", "git", "which", "man-db", "man-pages",
@@ -148,6 +148,8 @@ fn build_iso(workspace: &Path, version: &str) -> Result<PathBuf, String> {
     if !kernel_src.exists() {
         return Err("FATAL: vmlinuz-linux not found in rootfs!".into());
     }
+    let iso_boot_dir = iso_root.join("boot");
+    fs::create_dir_all(&iso_boot_dir).map_err(|e| e.to_string())?;
     fs::copy(&kernel_src, iso_root.join("boot/vmlinuz-linux")).map_err(|e| e.to_string())?;
     let memtest86_efi = root.join("boot/memtest86+/memtest.efi");
     if memtest86_efi.exists() {
