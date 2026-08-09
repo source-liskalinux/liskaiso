@@ -130,15 +130,16 @@ fn build_iso(workspace: &Path, version: &str) -> Result<PathBuf, String> {
         }
     }
     info("Configuring autologin....");
-    let getty_override_dir = root.join("etc/lksystem/system/getty1.service.d");
-    fs::create_dir_all(&getty_override_dir).ok();
-    let autologin_conf = 
-        "[Service]\n\
-         ExecStart=\n\
-         ExecStart=-/sbin/agetty --autologin root --noclear %I $TERM\n\
-        ";
-    fs::write(getty_override_dir.join("override.conf"), autologin_conf)
-        .map_err(|e| e.to_string())?;
+    let getty_service_path = root.join("etc/lksystem/system/getty1.service");
+    if getty_service_path.exists() {
+        if let Ok(content) = fs::read_to_string(&getty_service_path) {
+            let new_content = content.replace(
+                "ExecStart=/sbin/agetty -o '-p -- \\u' /dev/tty1",
+                "ExecStart=-/sbin/agetty --autologin root --noclear %I $TERM"
+            );
+            fs::write(&getty_service_path, new_content).map_err(|e| e.to_string())?;
+        }
+    }
     info("Setting default timezone to UTC....");
     let localtime_path = root.join("etc/localtime");
     let _ = fs::remove_file(&localtime_path);
