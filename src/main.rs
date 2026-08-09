@@ -22,7 +22,7 @@ fn error(msg: &str) { println!("{} {}", "::: [ LISKAISO ] ::: (✗) >".bright_re
 
 fn check_host_dependencies() -> Result<(), String> {
     info("Checking liskaiso dependencies....");
-    let required_tools = ["grub-mkrescue", "xorriso", "mformat", "mkfs.fat"];
+    let required_tools = ["grub-mkrescue", "xorriso", "mformat", "mkfs.fat", "mksquashfs"];
     for tool in &required_tools {
         let check = Command::new("which").arg(tool).output();
         match check {
