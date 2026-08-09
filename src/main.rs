@@ -139,7 +139,7 @@ fn build_iso(workspace: &Path, version: &str) -> Result<PathBuf, String> {
         ";
     fs::write(getty_override_dir.join("override.conf"), autologin_conf)
         .map_err(|e| e.to_string())?;
-    info("Setting default systemd timezone to UTC....");
+    info("Setting default timezone to UTC....");
     let localtime_path = root.join("etc/localtime");
     let _ = fs::remove_file(&localtime_path);
     let _ = symlink("/usr/share/zoneinfo/UTC", &localtime_path);
