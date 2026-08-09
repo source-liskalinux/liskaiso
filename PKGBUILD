@@ -10,7 +10,7 @@ pkgdesc="Liska ISO Builder"
 arch=('x86_64')
 url="https://github.com/source-liskalinux/liskaiso"
 license=('GPL-3.0-or-later')
-depends=('lkpm' 'grub' 'libisoburn' 'mtools' 'dosfstools' 'squashfs-tools')
+depends=('lkpm' 'grub' 'libisoburn' 'mtools' 'dosfstools' 'squashfs-tools' 'xorriso')
 makedepends=('rust')
 
 build() {
