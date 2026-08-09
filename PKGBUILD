@@ -23,5 +23,6 @@ package() {
     install -d "${pkgdir}/usr/bin"
     install -Dm755 "./target/release/liskaiso" "${pkgdir}/usr/bin/liskaiso"
     echo "--> [PACKAGE] Installing liskaiso-workspace...."
+    install -d "${pkgdir}/home/liskaiso-workspace"
     cp -a "./liskaiso-workspace" "${pkgdir}/home/liskaiso-workspace"
 }
