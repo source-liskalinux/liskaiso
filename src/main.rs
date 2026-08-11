@@ -102,7 +102,7 @@ fn build_iso(workspace: &Path, version: &str) -> Result<PathBuf, String> {
     let usr_sbin_dir = root.join("usr/sbin");
     fs::create_dir_all(&sbin_dir).ok();
     fs::create_dir_all(&usr_sbin_dir).ok();
-    let systemctl_target = Path::new("/usr/bin/lksystemctl");
+    let systemctl_target = Path::new("/usr/bin/lksysctl");
     for cmd in &["reboot", "shutdown", "poweroff", "halt"] {
         let sbin_link = sbin_dir.join(cmd);
         let usr_sbin_link = usr_sbin_dir.join(cmd);
@@ -130,12 +130,12 @@ fn build_iso(workspace: &Path, version: &str) -> Result<PathBuf, String> {
         }
     }
     info("Configuring autologin....");
-    let getty_service_path = root.join("etc/lksystem/system/getty1.service");
+    let getty_service_path = root.join("etc/lksystem/service/getty-tty1/run");
     if getty_service_path.exists() {
         if let Ok(content) = fs::read_to_string(&getty_service_path) {
             let new_content = content.replace(
-                "ExecStart=/sbin/agetty -o '-p -- \\u' /dev/tty1",
-                "ExecStart=-/sbin/agetty --autologin root --noclear %I $TERM"
+                "exec agetty --noclear tty1 linux",
+                "exec agetty --autologin root --noclear tty1 linux"
             );
             fs::write(&getty_service_path, new_content).map_err(|e| e.to_string())?;
         }
