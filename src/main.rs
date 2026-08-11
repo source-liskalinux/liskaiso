@@ -177,8 +177,7 @@ fn generate_pure_initramfs(rootfs: &Path, iso_root: &Path) -> Result<(), String>
     let target_img = iso_root.join("boot/initramfs-liska.img");
     run_command("lkinit", &[
         "--root", rootfs.to_str().unwrap(),
-        "--output", target_img.to_str().unwrap(),
-        "--iso"
+        "--output", target_img.to_str().unwrap()
     ])?;
     Ok(())
 }
