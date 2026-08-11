@@ -210,7 +210,7 @@ fn main() {
         }
         i += 1;
     }
-    if let Err(e) = check_host_depedencies() {
+    if let Err(e) = check_host_dependencies() {
         error(&format!("{}", e));
         exit(1);
     }
