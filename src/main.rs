@@ -73,7 +73,6 @@ fn load_package_list(workspace: &Path) -> Vec<String> {
 }
 
 fn install_package_pool(root: &Path, packages: &[String]) -> Result<(), String> {
-    let _ = run_command("lkpm", &["-r"]);
     let mut args = vec![
         "-id".to_string(),
         "--root".to_string(),
@@ -211,7 +210,10 @@ fn main() {
         }
         i += 1;
     }
-    let _ = check_host_dependencies();
+    if let Err(e) = check_host_depedencies() {
+        error(&format!("{}", e));
+        exit(1);
+    }
     let workspace = PathBuf::from("/home/liskaiso-workspace");
     fs::create_dir_all(&workspace).ok();
     if let Err(e) = build_iso(&workspace, &version) {
