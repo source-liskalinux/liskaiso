@@ -127,17 +127,33 @@ fn build_iso(workspace: &Path, version: &str) -> Result<PathBuf, String> {
             }
             let _ = fs::write(&passwd_path, new_lines.join("\n"));
         }
+        let mut passwd_content = fs::read_to_string(&passwd_path).unwrap_or_default();
+        if !passwd_content.contains("messagebus:") {
+            passwd_content.push_str("messagebus:x:18:18:D-Bus Message Daemon User:/run/dbus:/bin/false\n");
+            let _ = fs::write(&passwd_path, passwd_content);
+        }
+    }
+    let group_path = root.join("etc/group");
+    if group_path.exists() {
+        let mut group_content = fs::read_to_string(&group_path).unwrap_or_default();
+        if !group_content.contains("messagebus:") {
+            group_content.push_str("messagebus:x:18:\n");
+            let _ = fs::write(&group_path, group_content);
+        }
     }
     let shells_path = root.join("etc/shells");
     let shells_content = "/bin/sh\n/bin/bash\n/bin/zsh\n/usr/bin/zsh\n";
     let _ = fs::write(&shells_path, shells_content);
     info("Configuring autologin....");
+    let autologin_script = root.join("usr/bin/autologin");
+    let _ = fs::write(&autologin_script, "#!/bin/sh\nexec /bin/login -f root\n");
+    let _ = run_command("chmod", &["+x", autologin_script.to_str().unwrap()]);
     let getty_service_path = root.join("etc/lksystem/service/getty-tty1/run");
     if getty_service_path.exists() {
         if let Ok(content) = fs::read_to_string(&getty_service_path) {
             let new_content = content.replace(
                 "exec busybox getty 38400 tty1 linux",
-                "exec busybox getty -n -l /bin/login -o \"-f root\" 38400 tty1 linux"
+                "exec busybox getty -n -l /usr/bin/autologin 38400 tty1 linux"
             );
             fs::write(&getty_service_path, new_content).map_err(|e| e.to_string())?;
         }
