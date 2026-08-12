@@ -117,7 +117,7 @@ fn build_iso(workspace: &Path, version: &str) -> Result<PathBuf, String> {
             for line in content.lines() {
                 if line.starts_with("root:") {
                     let parts: Vec<&str> = line.split(':').collect();
-                    if parts.len() >= 7 {
+                    if parts.len() >= 6 {
                         new_lines.push(format!("{}:{}:{}:{}:{}:{}:/usr/bin/zsh", 
                             parts[0], parts[1], parts[2], parts[3], parts[4], parts[5]));
                         continue;
@@ -128,13 +128,16 @@ fn build_iso(workspace: &Path, version: &str) -> Result<PathBuf, String> {
             let _ = fs::write(&passwd_path, new_lines.join("\n"));
         }
     }
+    let shells_path = root.join("etc/shells");
+    let shells_content = "/bin/sh\n/bin/bash\n/bin/zsh\n/usr/bin/zsh\n";
+    let _ = fs::write(&shells_path, shells_content);
     info("Configuring autologin....");
     let getty_service_path = root.join("etc/lksystem/service/getty-tty1/run");
     if getty_service_path.exists() {
         if let Ok(content) = fs::read_to_string(&getty_service_path) {
             let new_content = content.replace(
-                "exec agetty --noclear tty1 linux",
-                "exec agetty --autologin root --noclear tty1 linux"
+                "exec busybox getty 38400 tty1 linux",
+                "exec busybox getty -n -l /bin/login -o \"-f root\" 38400 tty1 linux"
             );
             fs::write(&getty_service_path, new_content).map_err(|e| e.to_string())?;
         }
