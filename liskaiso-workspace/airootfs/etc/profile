@@ -1,5 +1,0 @@
-if [ -t 1 ] && [ -n "$PS1" ] && [ -x /usr/bin/zsh ] && [ "$(basename "$SHELL")" = "bash" ]; then
-    export SHELL=/usr/bin/zsh
-    export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-    exec /usr/bin/zsh -l
-fi
