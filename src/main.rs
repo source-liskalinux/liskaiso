@@ -127,19 +127,6 @@ fn build_iso(workspace: &Path, version: &str) -> Result<PathBuf, String> {
             }
             let _ = fs::write(&passwd_path, new_lines.join("\n"));
         }
-        let mut passwd_content = fs::read_to_string(&passwd_path).unwrap_or_default();
-        if !passwd_content.contains("root:") {
-            passwd_content.push_str("root:x:18:18:D-Bus Message Daemon User:/run/dbus:/bin/false\n");
-            let _ = fs::write(&passwd_path, passwd_content);
-        }
-    }
-    let group_path = root.join("etc/group");
-    if group_path.exists() {
-        let mut group_content = fs::read_to_string(&group_path).unwrap_or_default();
-        if !group_content.contains("root:") {
-            group_content.push_str("root:x:18:\n");
-            let _ = fs::write(&group_path, group_content);
-        }
     }
     let shells_path = root.join("etc/shells");
     let shells_content = "/bin/sh\n/bin/bash\n/bin/zsh\n/usr/bin/zsh\n";
