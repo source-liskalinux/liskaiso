@@ -139,8 +139,8 @@ fn build_iso(workspace: &Path, version: &str) -> Result<PathBuf, String> {
     if getty_service_path.exists() {
         if let Ok(content) = fs::read_to_string(&getty_service_path) {
             let new_content = content.replace(
-                "exec busybox getty 38400 tty1 linux",
-                "exec busybox getty -n -l /usr/bin/autologin 38400 tty1 linux"
+                "exec chpst -P busybox getty 38400 tty1 linux",
+                "exec chpst -P busybox getty -n -l /usr/bin/autologin 38400 tty1 linux"
             );
             fs::write(&getty_service_path, new_content).map_err(|e| e.to_string())?;
         }
