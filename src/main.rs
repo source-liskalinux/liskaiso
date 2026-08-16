@@ -73,6 +73,7 @@ fn load_package_list(workspace: &Path) -> Vec<String> {
 }
 
 fn install_package_pool(root: &Path, packages: &[String]) -> Result<(), String> {
+    run_command("lkpm", &["-i", "--root", root.to_str().unwrap(), "--noconfirm", "filesystem", "iana-etc"])?;
     let mut args = vec![
         "-id".to_string(),
         "--root".to_string(),
