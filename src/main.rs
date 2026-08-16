@@ -89,6 +89,62 @@ fn install_package_pool(root: &Path, packages: &[String]) -> Result<(), String> 
     Ok(())
 }
 
+const MERGED_USR_LINKS: &[&str] = &["lib", "lib64", "bin", "sbin"];
+
+fn setup_merged_usr_compat(root: &Path) -> Result<(), String> {
+    info("Setting up symlinks....");
+    for name in MERGED_USR_LINKS {
+        let link_path = root.join(name);
+        let target = format!("usr/{}", name);
+        let usr_target_path = root.join(&target);
+        match fs::symlink_metadata(&link_path) {
+            Ok(meta) if meta.file_type().is_symlink() => {
+                continue;
+            }
+            Ok(meta) if meta.is_dir() => {
+                fs::create_dir_all(&usr_target_path)
+                    .map_err(|e| format!("Cannot create {}: {}", usr_target_path.display(), e))?;
+                let entries = fs::read_dir(&link_path)
+                    .map_err(|e| format!("Cannot read {}: {}", link_path.display(), e))?;
+                for entry in entries {
+                    let entry = entry.map_err(|e| e.to_string())?;
+                    let dest = usr_target_path.join(entry.file_name());
+                    if !dest.exists() {
+                        fs::rename(entry.path(), &dest).map_err(|e| {
+                            format!(
+                                "Cannot move {} into {}: {}",
+                                entry.path().display(),
+                                usr_target_path.display(),
+                                e
+                            )
+                        })?;
+                    }
+                }
+                fs::remove_dir_all(&link_path)
+                    .map_err(|e| format!("Cannot remove {}: {}", link_path.display(), e))?;
+                symlink(&target, &link_path).map_err(|e| {
+                    format!("Cannot symlink {} -> {}: {}", link_path.display(), target, e)
+                })?;
+            }
+            Ok(_) => {
+                error(&format!(
+                    "{} exists and is neither a directory nor a symlink! Skipping....",
+                    link_path.display()
+                ));
+            }
+            Err(_) => {
+                fs::create_dir_all(&usr_target_path)
+                    .map_err(|e| format!("Cannot create {}: {}", usr_target_path.display(), e))?;
+                symlink(&target, &link_path).map_err(|e| {
+                    format!("Cannot symlink {} -> {}: {}", link_path.display(), target, e)
+                })?;
+            }
+        }
+    }
+    success("Symlinks are ready!");
+    Ok(())
+}
+
 fn build_iso(workspace: &Path, version: &str) -> Result<PathBuf, String> {
     let root = workspace.join("airootfs");
     let iso_root = workspace.join("iso_root");
@@ -97,6 +153,7 @@ fn build_iso(workspace: &Path, version: &str) -> Result<PathBuf, String> {
     info("Building Liska Linux ISO....");
     let packages = load_package_list(workspace);
     install_package_pool(&root, &packages)?;
+    setup_merged_usr_compat(&root)?;
     let sbin_dir = root.join("sbin");
     let usr_sbin_dir = root.join("usr/sbin");
     fs::create_dir_all(&sbin_dir).ok();
