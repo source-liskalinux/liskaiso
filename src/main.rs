@@ -184,7 +184,10 @@ fn main() {
         println!("::: [ Liska ISO Builder (1) ] :::");
         println!("---------------------------------");
         println!("");
-        println!("Usage: liskaiso --version=<version (default: 2026)>");
+        println!("Usage: liskaiso <options>");
+        println!("> -w | --workspace <path>     set workspace directory (default: ./iso-workspace)");
+        println!("> -v | --version <ver>        set ISO version (default: 2026)");
+        println!("> /etc/liskaiso               liskaiso workspace directory template");
         println!("");
         return;
     }
@@ -193,12 +196,15 @@ fn main() {
         exit(1);
     }
     let mut version = String::from("2026");
+    let mut workspace_arg = String::from("iso-workspace");
     let mut i = 1;
     while i < args.len() {
-        if args[i].starts_with("--version=") {
-            version = args[i].trim_start_matches("--version=").to_string();
-        } else if args[i] == "--version" && i + 1 < args.len() {
+        let arg = &args[i];
+        if (arg == "--version" || arg == "-v") && i + 1 < args.len() {
             version = args[i + 1].clone();
+            i += 1;
+        } else if (arg == "--workspace" || arg == "-w") && i + 1 < args.len() {
+            workspace_arg = args[i + 1].clone();
             i += 1;
         }
         i += 1;
@@ -207,8 +213,23 @@ fn main() {
         error(&format!("{}", e));
         exit(1);
     }
-    let workspace = PathBuf::from("/home/liskaiso-workspace");
-    fs::create_dir_all(&workspace).ok();
+    let current_dir = match env::current_dir() {
+        Ok(dir) => dir,
+        Err(e) => {
+            error(&format!("Failed to get current directory: {}", e));
+            exit(1);
+        }
+    };
+    let target_path = PathBuf::from(&workspace_arg);
+    let workspace = if target_path.is_absolute() {
+        target_path
+    } else {
+        current_dir.join(target_path)
+    };
+    if let Err(e) = fs::create_dir_all(&workspace) {
+        error(&format!("Failed to create workspace directory: {}", e));
+        exit(1);
+    }
     if let Err(e) = build_iso(&workspace, &version) {
         error(&format!("Failed to build Liska Linux ISO: {}", e));
         exit(1);

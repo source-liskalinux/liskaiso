@@ -12,6 +12,7 @@ url="https://github.com/source-liskalinux/liskaiso"
 license=('GPL-3.0-or-later')
 depends=('lkpm' 'grub' 'libisoburn' 'mtools' 'dosfstools' 'squashfs-tools' 'xorriso')
 makedepends=('rustup')
+backup=('etc/liskaiso')
 
 build() {
     echo "--> [BUILD] Compiling liskaiso...."
@@ -22,7 +23,6 @@ package() {
     echo "--> [PACKAGE] Installing liskaiso...."
     install -d "${pkgdir}/usr/bin"
     install -Dm755 "./target/release/liskaiso" "${pkgdir}/usr/bin/liskaiso"
-    echo "--> [PACKAGE] Installing liskaiso-workspace...."
-    install -d "${pkgdir}/home/liskaiso-workspace"
-    cp -a ./liskaiso-workspace/. "${pkgdir}/home/liskaiso-workspace/"
+    install -d "${pkgdir}/etc/liskaiso"
+    cp -a ./workspace/. "${pkgdir}/etc/liskaiso/"
 }
