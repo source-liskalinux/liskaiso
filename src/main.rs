@@ -98,19 +98,6 @@ fn build_iso(workspace: &Path, version: &str) -> Result<PathBuf, String> {
     info("Building Liska Linux ISO....");
     let packages = load_package_list(workspace);
     install_package_pool(&root, &packages)?;
-    let sbin_dir = root.join("sbin");
-    let usr_sbin_dir = root.join("usr/sbin");
-    fs::create_dir_all(&sbin_dir).ok();
-    fs::create_dir_all(&usr_sbin_dir).ok();
-    let systemctl_target = Path::new("/usr/bin/lksysctl");
-    for cmd in &["reboot", "shutdown", "poweroff", "halt"] {
-        let sbin_link = sbin_dir.join(cmd);
-        let usr_sbin_link = usr_sbin_dir.join(cmd);
-        let _ = fs::remove_file(&sbin_link);
-        let _ = fs::remove_file(&usr_sbin_link);
-        let _ = symlink(systemctl_target, &sbin_link);
-        let _ = symlink(systemctl_target, &usr_sbin_link);
-    }
     let passwd_path = root.join("etc/passwd");
     if passwd_path.exists() {
         if let Ok(content) = fs::read_to_string(&passwd_path) {
@@ -132,7 +119,7 @@ fn build_iso(workspace: &Path, version: &str) -> Result<PathBuf, String> {
     let shells_path = root.join("etc/shells");
     let shells_content = "/bin/sh\n/bin/bash\n/bin/zsh\n/usr/bin/zsh\n";
     let _ = fs::write(&shells_path, shells_content);
-    info("Configuring autologin....");
+    info("Configuring ISO autologin....");
     let autologin_script = root.join("usr/bin/autologin");
     let _ = fs::write(&autologin_script, "#!/bin/sh\nexec /bin/login -f root\n");
     let _ = run_command("chmod", &["+x", autologin_script.to_str().unwrap()]);
@@ -146,7 +133,7 @@ fn build_iso(workspace: &Path, version: &str) -> Result<PathBuf, String> {
             fs::write(&getty_service_path, new_content).map_err(|e| e.to_string())?;
         }
     }
-    info("Setting default timezone to UTC....");
+    info("Setting default ISO timezone to UTC....");
     let localtime_path = root.join("etc/localtime");
     let _ = fs::remove_file(&localtime_path);
     let _ = symlink("/usr/share/zoneinfo/UTC", &localtime_path);
