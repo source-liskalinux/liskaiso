@@ -123,7 +123,7 @@ fn build_iso(workspace: &Path, version: &str) -> Result<PathBuf, String> {
     let autologin_script = root.join("usr/bin/autologin");
     let _ = fs::write(&autologin_script, "#!/bin/sh\nexec /bin/login -f root\n");
     let _ = run_command("chmod", &["+x", autologin_script.to_str().unwrap()]);
-    let getty_service_path = root.join("etc/lksystem/service/getty-tty1/run");
+    let getty_service_path = root.join("etc/lksystem/services/getty-tty1/run");
     if getty_service_path.exists() {
         if let Ok(content) = fs::read_to_string(&getty_service_path) {
             let new_content = content.replace(
