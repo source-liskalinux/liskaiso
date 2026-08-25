@@ -2,7 +2,6 @@
 # Liska Linux banner and terminal configuration
 
 # Format: [ username@hostname ] / # sudo foo
-update-ca-trust
 PROMPT="%B%F{cyan}[ %n@%m ]%f %F{lightgreen}%~%f %F{white}>%f%b "
 CYAN='\033[36m'; GREEN='\033[92m'; BOLD='\033[1m'; RESET='\033[0m'
 printf "${BOLD}----------------------------${RESET}\n"

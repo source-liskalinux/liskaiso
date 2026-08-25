@@ -27,7 +27,7 @@ fn check_host_dependencies() -> Result<(), String> {
         let check = Command::new("which").arg(tool).output();
         match check {
             Ok(out) if out.status.success() => {},
-            _ => return Err(format!("'{}' is missing! Please install {} on your system to run liskaiso.", tool, tool)),
+            _ => return Err(format!("{} is missing! Please install {} on your system to run liskaiso.", tool, tool)),
         }
     }
     let has_efi64 = Path::new("/usr/lib/grub/x86_64-efi").exists() || Path::new("/usr/share/grub/x86_64-efi").exists();
@@ -43,7 +43,7 @@ fn run_command(cmd: &str, args: &[&str]) -> Result<(), String> {
     let status = Command::new(cmd)
         .args(args)
         .status()
-        .map_err(|err| format!("Could not start {}: {}", cmd, err))?;
+        .map_err(|err| format!("Could not start {}! Err: {}.", cmd, err))?;
     if status.success() {
         Ok(())
     } else {
@@ -133,11 +133,23 @@ fn build_iso(workspace: &Path, version: &str) -> Result<PathBuf, String> {
             fs::write(&getty_service_path, new_content).map_err(|e| e.to_string())?;
         }
     }
+    let getty2 = root.join("etc/lksystem/services/agetty-tty2");
+    let getty3 = root.join("etc/lksystem/services/agetty-tty3");
+    let getty4 = root.join("etc/lksystem/services/agetty-tty4");
+    let getty5 = root.join("etc/lksystem/services/agetty-tty5");
+    let getty6 = root.join("etc/lksystem/services/agetty-tty6");
+    let _ = fs::remove_dir_all(&getty2);
+    let _ = fs::remove_dir_all(&getty3);
+    let _ = fs::remove_dir_all(&getty4);
+    let _ = fs::remove_dir_all(&getty5);
+    let _ = fs::remove_dir_all(&getty6);
     info("Setting default ISO timezone to UTC....");
     let localtime_path = root.join("etc/localtime");
     let _ = fs::remove_file(&localtime_path);
     let _ = symlink("/usr/share/zoneinfo/UTC", &localtime_path);
     let _ = fs::write(root.join("etc/timezone"), "UTC\n");
+    info("Setting up ca-certificates....");
+    let _ = run_command("lkchroot", &[root.to_str().unwrap(), "update-ca-trust"]);
     let kernel_src = root.join("boot/vmlinuz-linux");
     if !kernel_src.exists() {
         return Err("FATAL: vmlinuz-linux not found in rootfs!".into());
@@ -191,8 +203,8 @@ fn main() {
         println!("");
         return;
     }
-    if unsafe { libc::geteuid() } != 0 {
-        error("Root permission required. Use 'sudo' for this operation!");
+    if unsafe { libc::getuid() } != 0 {
+        error("Operation not permitted (os error 1)!");
         exit(1);
     }
     let mut version = String::from("2026");
@@ -216,7 +228,7 @@ fn main() {
     let current_dir = match env::current_dir() {
         Ok(dir) => dir,
         Err(e) => {
-            error(&format!("Failed to get current directory: {}", e));
+            error(&format!("Failed to get current directory! Err: {}", e));
             exit(1);
         }
     };
@@ -227,11 +239,11 @@ fn main() {
         current_dir.join(target_path)
     };
     if let Err(e) = fs::create_dir_all(&workspace) {
-        error(&format!("Failed to create workspace directory: {}", e));
+        error(&format!("Failed to create workspace directory! Err: {}", e));
         exit(1);
     }
     if let Err(e) = build_iso(&workspace, &version) {
-        error(&format!("Failed to build Liska Linux ISO: {}", e));
+        error(&format!("Failed to build Liska Linux ISO! Err: {}", e));
         exit(1);
     }
 }
