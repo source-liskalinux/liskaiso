@@ -7,7 +7,7 @@ use colored::*;
 
 const PACKAGES: &[&str] = &[
     "linux", "linux-firmware", "lkfs", "lkpm", "lksystem",
-    "liska-install-scripts", "dbus", "glibc", "busybox", "zsh", "sudo", "efibootmgr",
+    "liska-install-scripts", "dbus", "glibc", "busybox", "zsh", "efibootmgr",
     "networkmanager", "modemmanager", "usb_modeswitch", "inetutils", "bash",
     "nano", "vim", "grub", "wget", "curl", "git", "which", "man-db", "man-pages",
     "util-linux", "coreutils", "findutils", "sed", "grep", "kmod", "e2fsprogs",

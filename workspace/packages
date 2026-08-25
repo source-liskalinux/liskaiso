@@ -8,7 +8,6 @@ dbus
 glibc
 busybox
 zsh
-sudo
 efibootmgr
 networkmanager
 modemmanager
