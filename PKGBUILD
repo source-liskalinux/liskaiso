@@ -24,5 +24,7 @@ package() {
     install -d "${pkgdir}/usr/bin"
     install -Dm755 "./target/release/liskaiso" "${pkgdir}/usr/bin/liskaiso"
     install -d "${pkgdir}/etc/liskaiso"
-    cp -a ./workspace/. "${pkgdir}/etc/liskaiso/"
+    cp -a ./workspace "${pkgdir}/etc/liskaiso/"
+    chmod 750 "${pkgdir}/etc/liskaiso/airootfs/root"
+    chown root:root "${pkgdir}/etc/liskaiso/airootfs/root"
 }
