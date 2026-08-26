@@ -31,7 +31,7 @@ package() {
     install -d 750 "${pkgdir}/etc/liskaiso/airootfs/root"
     chmod 750 "${pkgdir}/etc/liskaiso/airootfs/root"
     chown root:root "${pkgdir}/etc/liskaiso/airootfs/root"
-    cp -a ./workspace/.zshrc "${pkgdir}/etc/liskaiso/root/.zshrc"
+    cp -a ./workspace/zshrc "${pkgdir}/etc/liskaiso/root/.zshrc"
     chmod 600 "${pkgdir}/etc/liskaiso/airootfs/root/.zshrc"
     chown root:root "${pkgdir}/etc/liskaiso/airootfs/root/.zshrc"
 }
