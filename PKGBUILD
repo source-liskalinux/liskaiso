@@ -22,11 +22,16 @@ build() {
 package() {
     echo "--> [PACKAGE] Installing liskaiso...."
     install -d "${pkgdir}/usr/bin"
-    install -Dm755 "./target/release/liskaiso" "${pkgdir}/usr/bin/liskaiso"
+    install -Dm 755 "./target/release/liskaiso" "${pkgdir}/usr/bin/liskaiso"
     install -d "${pkgdir}/etc/liskaiso"
-    cp -a ./workspace/. "${pkgdir}/etc/liskaiso/"
+    install -d "${pkgdir}/etc/liskaiso/airootfs"
+    install -d "${pkgdir}/etc/liskaiso/iso_root/boot/grub"
+    cp -a ./workspace/packages "${pkgdir}/etc/liskaiso/packages"
+    cp -a ./workspace/grub.cfg "${pkgdir}/etc/liskaiso/iso_root/boot/grub/grub.cfg"
+    install -d 750 "${pkgdir}/etc/liskaiso/airootfs/root"
     chmod 750 "${pkgdir}/etc/liskaiso/airootfs/root"
     chown root:root "${pkgdir}/etc/liskaiso/airootfs/root"
+    cp -a ./workspace/.zshrc "${pkgdir}/etc/liskaiso/root/.zshrc"
     chmod 600 "${pkgdir}/etc/liskaiso/airootfs/root/.zshrc"
     chown root:root "${pkgdir}/etc/liskaiso/airootfs/root/.zshrc"
 }
