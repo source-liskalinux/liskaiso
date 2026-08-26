@@ -27,4 +27,6 @@ package() {
     cp -a ./workspace/. "${pkgdir}/etc/liskaiso/"
     chmod 750 "${pkgdir}/etc/liskaiso/airootfs/root"
     chown root:root "${pkgdir}/etc/liskaiso/airootfs/root"
+    chmod 600 "${pkgdir}/etc/liskaiso/airootfs/root/.zshrc"
+    chown root:root "${pkgdir}/etc/liskaiso/airootfs/root/.zshrc"
 }
