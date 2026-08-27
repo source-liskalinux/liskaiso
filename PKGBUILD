@@ -26,6 +26,7 @@ package() {
     install -d "${pkgdir}/etc/liskaiso.d"
     install -Dm 644 ./workspace/packages "${pkgdir}/etc/liskaiso.d/packages"
     install -Dm 644 ./workspace/grub.cfg "${pkgdir}/etc/liskaiso.d/iso_root/boot/grub/grub.cfg"
+    install -d "${pkgdir}/etc/liskaiso.d/airootfs"
     install -dm 750 "${pkgdir}/etc/liskaiso.d/airootfs/root"
     chmod 750 "${pkgdir}/etc/liskaiso.d/airootfs/root"
     chown root:root "${pkgdir}/etc/liskaiso.d/airootfs/root"
