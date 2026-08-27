@@ -34,4 +34,6 @@ package() {
     install -Dm 600 ./workspace/zshrc "${pkgdir}/etc/liskaiso.d/airootfs/root/.zshrc"
     chmod 600 "${pkgdir}/etc/liskaiso.d/airootfs/root/.zshrc"
     chown root:root "${pkgdir}/etc/liskaiso.d/airootfs/root/.zshrc"
+    chmod 750 "${pkgdir}/etc/liskaiso.d/airootfs/root"
+    chown root:root "${pkgdir}/etc/liskaiso.d/airootfs/root"
 }
