@@ -12,7 +12,7 @@ url="https://github.com/source-liskalinux/liskaiso"
 license=('GPL-3.0-or-later')
 depends=('lkpm' 'grub' 'libisoburn' 'mtools' 'dosfstools' 'squashfs-tools' 'xorriso')
 makedepends=('rustup')
-backup=('etc/liskaiso')
+backup=('etc/liskaiso.d')
 
 build() {
     echo "--> [BUILD] Compiling liskaiso...."
@@ -23,14 +23,13 @@ package() {
     echo "--> [PACKAGE] Installing liskaiso...."
     install -d "${pkgdir}/usr/bin"
     install -Dm 755 "./target/release/liskaiso" "${pkgdir}/usr/bin/liskaiso"
-    install -d "${pkgdir}/etc/liskaiso"
-    install -d "${pkgdir}/etc/liskaiso/airootfs"
-    install -Dm 644 ./workspace/packages "${pkgdir}/etc/liskaiso/packages"
-    install -Dm 644 ./workspace/grub.cfg "${pkgdir}/etc/liskaiso/iso_root/boot/grub/grub.cfg"
-    install -d 750 "${pkgdir}/etc/liskaiso/airootfs/root"
-    chmod 750 "${pkgdir}/etc/liskaiso/airootfs/root"
-    chown root:root "${pkgdir}/etc/liskaiso/airootfs/root"
-    install -Dm 600 ./workspace/zshrc "${pkgdir}/etc/liskaiso/airootfs/root/.zshrc"
-    chmod 600 "${pkgdir}/etc/liskaiso/airootfs/root/.zshrc"
-    chown root:root "${pkgdir}/etc/liskaiso/airootfs/root/.zshrc"
+    install -dm "${pkgdir}/etc/liskaiso.d"
+    install -Dm 644 ./workspace/packages "${pkgdir}/etc/liskaiso.d/packages"
+    install -Dm 644 ./workspace/grub.cfg "${pkgdir}/etc/liskaiso.d/iso_root/boot/grub/grub.cfg"
+    install -dm 750 "${pkgdir}/etc/liskaiso.d/airootfs/root"
+    chmod 750 "${pkgdir}/etc/liskaiso.d/airootfs/root"
+    chown root:root "${pkgdir}/etc/liskaiso.d/airootfs/root"
+    install -Dm 600 ./workspace/zshrc "${pkgdir}/etc/liskaiso.d/airootfs/root/.zshrc"
+    chmod 600 "${pkgdir}/etc/liskaiso.d/airootfs/root/.zshrc"
+    chown root:root "${pkgdir}/etc/liskaiso.d/airootfs/root/.zshrc"
 }
