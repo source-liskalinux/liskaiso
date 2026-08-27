@@ -23,7 +23,7 @@ package() {
     echo "--> [PACKAGE] Installing liskaiso...."
     install -d "${pkgdir}/usr/bin"
     install -Dm 755 "./target/release/liskaiso" "${pkgdir}/usr/bin/liskaiso"
-    install -dm "${pkgdir}/etc/liskaiso.d"
+    install -d "${pkgdir}/etc/liskaiso.d"
     install -Dm 644 ./workspace/packages "${pkgdir}/etc/liskaiso.d/packages"
     install -Dm 644 ./workspace/grub.cfg "${pkgdir}/etc/liskaiso.d/iso_root/boot/grub/grub.cfg"
     install -dm 750 "${pkgdir}/etc/liskaiso.d/airootfs/root"
