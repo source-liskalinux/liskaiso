@@ -1,0 +1,11 @@
+# Fix Home and End keys in native TTY and Emulators
+bindkey '^[[1~' beginning-of-line      # Standard Home
+bindkey '^[[4~' end-of-line            # Standard End
+bindkey '^[[H'  beginning-of-line      # Alternative Home
+bindkey '^[[F'  end-of-line            # Alternative End
+# Fix Page Up and Page Down keys in native TTY
+bindkey '^[[5~' up-line-or-history     # Page Up (Search history backward)
+bindkey '^[[6~' down-line-or-history   # Page Down (Search history forward)
+# Prompt format when on TTY
+# Format: [ username@hostname ] / > sudo foo
+PROMPT="%B%F{cyan}[ %n@%m ]%f %F{lightgreen}%~%f %F{white}>%f%b "

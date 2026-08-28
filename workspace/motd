@@ -1,0 +1,9 @@
+Welcome to [36m[1mLiska Linux[0m live iso!
+Installation guide page:
+[92m[1mhttps://liskalinuxwiki.web.app/installation-guide/[0m
+
+To connect to a Wi-Fi network, use  [36mnmtui[0m utility.
+For mobile broadband (WWAN) modems, use  [36mmmcli[0m utility.
+Ethernet, WLAN and WWAN interfaces using DHCP should work automatically.
+
+──────────────────────────────────────────────────────────────────────────────

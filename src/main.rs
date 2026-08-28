@@ -90,6 +90,37 @@ fn install_package_pool(root: &Path, packages: &[String]) -> Result<(), String> 
     Ok(())
 }
 
+fn clean_airootfs(root: &Path, name: &str) -> Result<(), String> {
+    let dir = root.join(&name);
+    if dir.exists() {
+        for entry in fs::read_dir(&dir).map_err(|e| e.to_string())? {
+            let entry = entry.map_err(|e| e.to_string())?;
+            let path = entry.path();
+            if path.is_dir() {
+                fs::remove_dir_all(&path).map_err(|e| e.to_string())?;
+            } else {
+                fs::remove_file(&path).map_err(|e| e.to_string())?;
+            }
+        }
+    }
+    Ok(())
+}
+
+fn configure_fstab_boot_mount(root: &Path) -> Result<(), String> {
+    let fstab_path = root.join("etc/fstab");
+    let mut content = if fstab_path.exists() {
+        fs::read_to_string(&fstab_path).unwrap_or_default()
+    } else {
+        String::from("# /etc/fstab: static file system information\n")
+    };
+    if !content.contains("/boot") {
+        content.push_str("\n# Mount Live ISO boot partition to /boot\n");
+        content.push_str("LABEL=LISKA_ISO  /boot  iso9660  defaults,ro,nofail  0  0\n");
+        fs::write(&fstab_path, content).map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}
+
 fn build_iso(workspace: &Path, version: &str) -> Result<PathBuf, String> {
     let root = workspace.join("airootfs");
     let iso_root = workspace.join("iso_root");
@@ -154,7 +185,9 @@ fn build_iso(workspace: &Path, version: &str) -> Result<PathBuf, String> {
     if !kernel_src.exists() {
         return Err("FATAL: vmlinuz-linux not found in rootfs!".into());
     }
-    fs::copy(&kernel_src, iso_root.join("boot/vmlinuz-linux")).map_err(|e| e.to_string())?;
+    let iso_boot = iso_root.join("boot");
+    fs::create_dir_all(&iso_boot).ok();
+    fs::copy(&kernel_src, iso_boot.join("vmlinuz-linux")).map_err(|e| e.to_string())?;
     let memtest86_efi = root.join("boot/memtest86+/memtest.efi");
     if memtest86_efi.exists() {
         let efi_dst = iso_root.join("EFI/memtest");
@@ -162,6 +195,13 @@ fn build_iso(workspace: &Path, version: &str) -> Result<PathBuf, String> {
         let _ = fs::copy(&memtest86_efi, efi_dst.join("memtest86.efi"));
     }
     generate_pure_initramfs(&root, &iso_root)?;
+    info("Cleaning boot directory contents inside airootfs....");
+    let _ = clean_airootfs(&root, "boot");
+    info("Cleaning lkpm backup directory contents inside airootfs if filled....");
+    let _ = clean_airootfs(&root, "etc/lkpm.d/backup/pkg-update");
+    let _ = clean_airootfs(&root, "etc/lkpm.d/backup/pkg-delete");
+    info("Configuring /etc/fstab for boot mounting....");
+    configure_fstab_boot_mount(&root)?;
     let squash_target = iso_root.join("liskafs.sfs");
     info("Compressing filesystem into liskafs.sfs....");
     run_command("mksquashfs", &[
@@ -181,6 +221,8 @@ fn build_iso(workspace: &Path, version: &str) -> Result<PathBuf, String> {
 fn generate_pure_initramfs(rootfs: &Path, iso_root: &Path) -> Result<(), String> {
     info("Calling lkinit to generate initramfs....");
     let target_img = iso_root.join("boot/initramfs-liska.img");
+    let iso_boot = iso_root.join("boot");
+    fs::create_dir_all(&iso_boot).ok();
     run_command("lkinit", &[
         "--root", rootfs.to_str().unwrap(),
         "--output", target_img.to_str().unwrap()
@@ -195,7 +237,6 @@ fn main() {
         println!("---------------------------------");
         println!("::: [ Liska ISO Builder (1) ] :::");
         println!("---------------------------------");
-        println!("");
         println!("Usage: liskaiso <options>");
         println!("> -w | --workspace <path>     set workspace directory (default: ./iso-workspace)");
         println!("> -v | --version <ver>        set ISO version (default: 2026)");
