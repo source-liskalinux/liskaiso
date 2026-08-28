@@ -114,6 +114,7 @@ fn build_iso(workspace: &Path, version: &str) -> Result<PathBuf, String> {
     info("Building Liska Linux ISO....");
     let packages = load_package_list(workspace);
     install_package_pool(&root, &packages)?;
+    info("Restoring some of important file....");
     let zprofile = root.join("etc/lkpm.d/backup/pkg-update/zsh/zprofile.lkpmsave");
     let _ = fs::remove_file(root.join("etc/zsh/zprofile"));
     let _ = fs::copy(&zprofile, root.join("etc/zsh/zprofile"));
