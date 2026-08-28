@@ -106,21 +106,6 @@ fn clean_airootfs(root: &Path, name: &str) -> Result<(), String> {
     Ok(())
 }
 
-fn configure_fstab_boot_mount(root: &Path) -> Result<(), String> {
-    let fstab_path = root.join("etc/fstab");
-    let mut content = if fstab_path.exists() {
-        fs::read_to_string(&fstab_path).unwrap_or_default()
-    } else {
-        String::from("# /etc/fstab: static file system information\n")
-    };
-    if !content.contains("/boot") {
-        content.push_str("\n# Mount Live ISO boot partition to /boot\n");
-        content.push_str("LABEL=LISKA_ISO  /boot  iso9660  defaults,ro,nofail  0  0\n");
-        fs::write(&fstab_path, content).map_err(|e| e.to_string())?;
-    }
-    Ok(())
-}
-
 fn build_iso(workspace: &Path, version: &str) -> Result<PathBuf, String> {
     let root = workspace.join("airootfs");
     let iso_root = workspace.join("iso_root");
@@ -200,8 +185,6 @@ fn build_iso(workspace: &Path, version: &str) -> Result<PathBuf, String> {
     info("Cleaning lkpm backup directory contents inside airootfs if filled....");
     let _ = clean_airootfs(&root, "etc/lkpm.d/backup/pkg-update");
     let _ = clean_airootfs(&root, "etc/lkpm.d/backup/pkg-delete");
-    info("Configuring /etc/fstab for boot mounting....");
-    configure_fstab_boot_mount(&root)?;
     let squash_target = iso_root.join("liskafs.sfs");
     info("Compressing filesystem into liskafs.sfs....");
     run_command("mksquashfs", &[

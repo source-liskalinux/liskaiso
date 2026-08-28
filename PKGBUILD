@@ -31,7 +31,6 @@ package() {
     install -d "${pkgdir}/etc/liskaiso.d"
     install -D ./workspace/packages "${pkgdir}/etc/liskaiso.d/packages"
     install -D ./workspace/grub.cfg "${pkgdir}/etc/liskaiso.d/iso_root/boot/grub/grub.cfg"
-    install -D ./workspace/motd "${pkgdir}/etc/liskaiso.d/airootfs/etc/motd"
     install -D ./workspace/zprofile "${pkgdir}/etc/liskaiso.d/airootfs/etc/zsh/zprofile"
     install -D ./workspace/hostname "${pkgdir}/etc/liskaiso.d/airootfs/etc/hostname"
 }
