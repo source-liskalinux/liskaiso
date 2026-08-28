@@ -114,6 +114,12 @@ fn build_iso(workspace: &Path, version: &str) -> Result<PathBuf, String> {
     info("Building Liska Linux ISO....");
     let packages = load_package_list(workspace);
     install_package_pool(&root, &packages)?;
+    let zprofile = root.join("etc/lkpm.d/backup/pkg-update/zsh/zprofile");
+    let _ = fs::remove_file(root.join("etc/zsh/zprofile"));
+    let _ = fs::copy(&zprofile, root.join("etc/zsh/zprofile"));
+    let hostname = root.join("etc/lkpm.d/backup/pkg-update/filesystem/hostname");
+    let _ = fs::remove_file(root.join("etc/hostname"));
+    let _ = fs::copy(&hostname, root.join("etc/hostname"));
     let passwd_path = root.join("etc/passwd");
     if passwd_path.exists() {
         if let Ok(content) = fs::read_to_string(&passwd_path) {
