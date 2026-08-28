@@ -14,18 +14,19 @@ depends=('lkpm' 'grub' 'libisoburn' 'mtools' 'dosfstools' 'squashfs-tools' 'xorr
 makedepends=('rustup')
 backup=('etc/liskaiso.d')
 
+prepare() {
+    cargo check --release --all-targets
+}
+
 build() {
-    echo "--> [BUILD] Compiling liskaiso...."
     cargo build --release
 }
 
 check() {
-    echo "--> [CHECK] Checking compiled binary...."
-    cargo check --release --all-targets
+    cargo test --release
 }
 
 package() {
-    echo "--> [PACKAGE] Installing liskaiso...."
     install -d "${pkgdir}/usr/bin"
     install -Dm 755 "./target/release/liskaiso" "${pkgdir}/usr/bin/liskaiso"
     install -d "${pkgdir}/etc/liskaiso.d"
