@@ -183,8 +183,9 @@ fn build_iso(workspace: &Path, version: &str) -> Result<PathBuf, String> {
     info("Cleaning boot directory contents inside airootfs....");
     let _ = clean_airootfs(&root, "boot");
     info("Cleaning lkpm backup directory contents inside airootfs if filled....");
-    let _ = clean_airootfs(&root, "etc/lkpm.d/backup/pkg-update");
-    let _ = clean_airootfs(&root, "etc/lkpm.d/backup/pkg-delete");
+    let _ = clean_airootfs(&root, "etc/lkpm.d/backups/pkg-updated");
+    let _ = clean_airootfs(&root, "etc/lkpm.d/backups/pkg-deleted");
+    let _ = clean_airootfs(&root, "etc/lkpm.d/backups/pkg-modified");
     let squash_target = iso_root.join("liskafs.sfs");
     info("Compressing filesystem into liskafs.sfs....");
     run_command("mksquashfs", &[
